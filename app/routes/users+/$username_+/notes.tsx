@@ -1,14 +1,13 @@
-import { Link, NavLink, Outlet } from '@remix-run/react'
+import { Link, NavLink, Outlet, useParams } from '@remix-run/react'
 
 export default function NotesRoute() {
+	const params = useParams()
 	return (
 		<div className="flex h-full justify-between border-8 border-blue-500 pb-12">
 			<h1 className="text-h1">Notes</h1>
 			<ul>
 				<li>
-					<Link to=".." relative="path">
-						Back to Kody
-					</Link>
+					<Link to=".." relative="path">{`Back to ${params.username}`}</Link>
 				</li>
 				<li>
 					<NavLink
