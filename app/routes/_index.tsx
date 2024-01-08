@@ -9,7 +9,7 @@ export const meta: MetaFunction = () => {
 
 export default function Index() {
   return (
-    <h1>
+    <h1 className="p-8 text-xl">
       Hello world!
     </h1>
   );

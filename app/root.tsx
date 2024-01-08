@@ -11,6 +11,7 @@ import {
 
 import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
+import tailwindStylesheetUrl from './styles/tailwind.css'
 
 export const links: LinksFunction = () => {
   return [
@@ -22,6 +23,10 @@ export const links: LinksFunction = () => {
     },
     {
       href: fontStylesheetUrl,
+      rel: 'stylesheet',
+    },
+    {
+      href: tailwindStylesheetUrl,
       rel: 'stylesheet',
     },
   ]
