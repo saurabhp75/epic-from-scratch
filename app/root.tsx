@@ -10,6 +10,7 @@ import {
 } from "@remix-run/react";
 
 import faviconAssetUrl from './assets/favicon.svg'
+import fontStylesheetUrl from './styles/font.css'
 
 export const links: LinksFunction = () => {
   return [
@@ -18,6 +19,10 @@ export const links: LinksFunction = () => {
       type: 'image/svg+xml',
       href: faviconAssetUrl,
       rel: 'icon',
+    },
+    {
+      href: fontStylesheetUrl,
+      rel: 'stylesheet',
     },
   ]
 };
