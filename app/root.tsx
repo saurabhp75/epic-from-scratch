@@ -13,6 +13,10 @@ import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
 
+// This is a side effect import. Remix will create a bundle 
+// file "cssBundleHref" and put the css there. 
+import './styles/global.css'
+
 export const links: LinksFunction = () => {
   return [
     ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
