@@ -9,12 +9,14 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
+import faviconAssetUrl from './assets/favicon.svg'
+
 export const links: LinksFunction = () => {
   return [
     ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
     {
       type: 'image/svg+xml',
-      href: 'favicon.svg',
+      href: faviconAssetUrl,
       rel: 'icon',
     },
   ]
