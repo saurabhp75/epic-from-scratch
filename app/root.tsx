@@ -9,9 +9,16 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
-export const links: LinksFunction = () => [
-  ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
-];
+export const links: LinksFunction = () => {
+  return [
+    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
+    {
+      type: 'image/svg+xml',
+      href: 'favicon.svg',
+      rel: 'icon',
+    },
+  ]
+};
 
 export default function App() {
   return (
