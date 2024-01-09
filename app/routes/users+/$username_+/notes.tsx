@@ -1,7 +1,7 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
-import { cn } from '~/utils/misc'
 import { db } from '~/utils/db.server'
+import { cn } from '~/utils/misc'
 
 export async function loader({ params }: LoaderFunctionArgs) {
 	const { username } = params
