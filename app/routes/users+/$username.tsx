@@ -1,16 +1,25 @@
-import { Link, useParams } from '@remix-run/react'
+import { type LoaderFunctionArgs } from '@remix-run/node'
+import { Link, useLoaderData} from '@remix-run/react'
+import { db } from '~/utils/db.server'
+
+export async function loader({ params }: LoaderFunctionArgs) {
+	const { username } = params
+
+	const user = db.user.findFirst({
+		where: {
+			username: { equals: username },
+		},
+	})
+
+	return { user }
+}
 
 export default function KodyProfileRoute() {
-	const params = useParams()
+	const data = useLoaderData<typeof loader>()
 
 	return (
 		<div className="container mb-48 mt-36">
-			{/*
-				🐨 swap params.username with the user's name
-				(💯 note, the user's name is not required, so as extra credit, add a
-				fallback to the username)
-			*/}
-			<h1 className="text-h1">{params.username}</h1>
+			<h1 className="text-h1">{data.user?.name ?? data?.user?.username}</h1>
 			<Link to="notes" className="underline">
 				Notes
 			</Link>
