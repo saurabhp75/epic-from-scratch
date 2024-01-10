@@ -1,20 +1,20 @@
-import type { Config } from 'tailwindcss'
+import  { type Config } from 'tailwindcss'
 import defaultTheme from 'tailwindcss/defaultTheme.js'
 import animatePlugin from 'tailwindcss-animate'
+import radixPlugin from 'tailwindcss-radix'
 
 export default {
-  content: [ './app/**/*.{ts,tsx,jsx,js}'],
-  darkMode: 'class',
-  theme: {
-    container: {
+	content: ['./app/**/*.{ts,tsx,jsx,js}'],
+	darkMode: 'class',
+	theme: {
+		container: {
 			center: true,
 			padding: '2rem',
 			screens: {
 				'2xl': '1400px',
 			},
 		},
-    extend: {
-      
+		extend: {
 			colors: {
 				border: 'hsl(var(--border))',
 				input: {
@@ -118,8 +118,8 @@ export default {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 			},
-    },
-  },
-  plugins: [animatePlugin],
+		},
+	},
+	plugins: [animatePlugin, radixPlugin],
 } satisfies Config
 
