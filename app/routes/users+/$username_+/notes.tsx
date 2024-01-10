@@ -1,7 +1,7 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 import { db } from '~/utils/db.server'
-import { cn } from '~/utils/misc'
+import { cn, invariantResponse } from '~/utils/misc'
 
 export async function loader({ params }: LoaderFunctionArgs) {
 	const { username } = params
@@ -10,6 +10,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 			username: { equals: username },
 		},
 	})
+	invariantResponse(owner, 'owner not found', { status: 404 })
 	const notes = db.note.findMany({
 		where: {
 			owner: {

@@ -1,6 +1,7 @@
-import { type LoaderFunctionArgs } from '@remix-run/node'
-import { Link, useLoaderData} from '@remix-run/react'
+import { json, type LoaderFunctionArgs } from '@remix-run/node'
+import { Link, useLoaderData } from '@remix-run/react'
 import { db } from '~/utils/db.server'
+import { invariantResponse } from '~/utils/misc'
 
 export async function loader({ params }: LoaderFunctionArgs) {
 	const { username } = params
@@ -11,7 +12,13 @@ export async function loader({ params }: LoaderFunctionArgs) {
 		},
 	})
 
-	return { user }
+	// Replaced by invariantResponse() utility
+	// if (!user) {
+	// 	throw new Response('user not found', { status: 404 })
+	// }
+	invariantResponse(user, 'user not found', { status: 404 })
+
+	return json({ user: { name: user?.name, username: user?.username } })
 }
 
 export default function KodyProfileRoute() {
