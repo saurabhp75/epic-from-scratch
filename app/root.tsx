@@ -7,6 +7,7 @@ import {
 	LiveReload,
 	Outlet,
 	Scripts,
+	ScrollRestoration,
 	useLoaderData,
 } from '@remix-run/react'
 
@@ -70,6 +71,7 @@ export default function App() {
 				</div>
 				<div className="h-5" />
 				<Scripts />
+				<ScrollRestoration />
 				<LiveReload />
 			</body>
 		</html>

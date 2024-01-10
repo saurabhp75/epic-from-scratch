@@ -43,6 +43,7 @@ export default function NotesRoute() {
 								<li key={note.id} className="p-1 pr-0">
 									<NavLink
 										to={note.id}
+										preventScrollReset
 										className={({ isActive }) =>
 											cn(navLinkDefaultClassName, isActive && 'bg-accent')
 										}
@@ -51,10 +52,6 @@ export default function NotesRoute() {
 									</NavLink>
 								</li>
 							))}
-							{/*
-							🐨 instead of hard coding the note, create one <li> for each note
-							in the database with data.notes.map
-						*/}
 						</ul>
 					</div>
 				</div>
