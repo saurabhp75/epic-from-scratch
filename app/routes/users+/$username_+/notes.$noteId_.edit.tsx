@@ -17,10 +17,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	const formData = await request.formData()
 	const title = formData.get('title')
 	const content = formData.get('content')
+	invariantResponse(typeof title === 'string', 'title must be a string')
+	invariantResponse(typeof content === 'string', 'content must be a string')
 
 	db.note.update({
 		where: { id: { equals: params.noteId } },
-		// @ts-expect-error
 		data: { title, content },
 	})
 
