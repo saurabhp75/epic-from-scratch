@@ -3,12 +3,14 @@ import {
 	json,
 	redirect,
 	type ActionFunctionArgs,
+	type MetaFunction,
 } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
 import { db } from '~/utils/db.server'
 import { invariantResponse } from '~/utils/misc'
+import { type loader as notesLoader } from './notes'
 
 export async function loader({ params }: LoaderFunctionArgs) {
 	const { noteId } = params
@@ -62,4 +64,35 @@ export default function SomeNoteId() {
 			</div>
 		</div>
 	)
+}
+
+export const meta: MetaFunction<
+	typeof loader,
+	{ 'routes/users+/$username_+/notes': typeof notesLoader }
+> = ({ data, params, matches }) => {
+	console.log({ data })
+
+	// use matches to find the route for notes by that ID
+	// matches.find(m => m.id === 'routes/users+/$username_+/notes')
+
+	// use the data from our loader and our parent's loader to create a title
+	// and description that show the note title, user's name, and the first part of
+	// the note's content.
+	const notesMatch = matches.find(
+		m => m.id === 'routes/users+/$username_+/notes',
+	)
+	const displayName = notesMatch?.data?.owner.name ?? params.username
+
+	const noteTitle = data?.note.title ?? 'Note'
+	const noteContentsSummary =
+		data && data.note.content.length > 100
+			? data?.note.content.slice(0, 97) + '...'
+			: data?.note.content
+	return [
+		{ title: `${noteTitle} | ${displayName}'s Notes | Epic Notes` },
+		{
+			name: 'description',
+			content: noteContentsSummary,
+		},
+	]
 }
