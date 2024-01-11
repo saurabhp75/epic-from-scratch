@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/node'
+import { json, type MetaFunction, type LoaderFunctionArgs } from '@remix-run/node'
 import { Link, useLoaderData } from '@remix-run/react'
 import { db } from '~/utils/db.server'
 import { invariantResponse } from '~/utils/misc'
@@ -32,4 +32,11 @@ export default function KodyProfileRoute() {
 			</Link>
 		</div>
 	)
+}
+
+export const meta: MetaFunction = () => {
+	return [
+		{ title: 'Profile | Epic Notes' },
+		{ name: 'description', content: 'Checkout this Profile on Epic Notes' },
+	]
 }
