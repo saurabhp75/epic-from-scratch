@@ -45,7 +45,6 @@ export const meta: MetaFunction = () => {
 }
 
 export async function loader() {
-	throw new Error('Something went wrong!')
 	return json({ username: os.userInfo().username, ENV: getEnv() })
 }
 
