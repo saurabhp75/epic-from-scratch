@@ -5,10 +5,16 @@ import {
 	type LoaderFunctionArgs,
 	type ActionFunctionArgs,
 } from '@remix-run/node'
-import { Form, useLoaderData } from '@remix-run/react'
+import {
+	Form,
+	useFormAction,
+	useLoaderData,
+	useNavigation,
+} from '@remix-run/react'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
 import { db } from '~/utils/db.server'
 import { invariantResponse } from '~/utils/misc'
@@ -46,6 +52,13 @@ export async function loader({ params }: LoaderFunctionArgs) {
 
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
+	// determine whether this form is submitting
+	const navigation = useNavigation()
+	const formAction = useFormAction()
+	const isSubmitting =
+		navigation.state !== 'idle' &&
+		navigation.formMethod === 'POST' &&
+		navigation.formAction === formAction
 
 	return (
 		<Form
@@ -68,7 +81,13 @@ export default function NoteEdit() {
 				<Button variant="destructive" type="reset">
 					Reset
 				</Button>
-				<Button type="submit">Submit</Button>
+				<StatusButton
+					type="submit"
+					disabled={isSubmitting}
+					status={isSubmitting ? 'pending' : 'idle'}
+				>
+					Submit
+				</StatusButton>
 			</div>
 		</Form>
 	)
