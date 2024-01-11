@@ -14,6 +14,7 @@ import {
 import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import { getEnv } from './utils/env.server'
 
 export const links: LinksFunction = () => {
 	return [
@@ -35,7 +36,7 @@ export const links: LinksFunction = () => {
 }
 
 export async function loader() {
-	return json({ username: os.userInfo().username })
+	return json({ username: os.userInfo().username, ENV: getEnv() })
 }
 
 export default function App() {
@@ -72,6 +73,11 @@ export default function App() {
 				<div className="h-5" />
 				<Scripts />
 				<ScrollRestoration />
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `window.ENV = ${JSON.stringify(data.ENV)}`,
+					}}
+				/>
 				<LiveReload />
 			</body>
 		</html>
