@@ -3,7 +3,7 @@ import {
 	type MetaFunction,
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
-import { Link, useLoaderData } from '@remix-run/react'
+import { Link, useLoaderData, useRouteError } from '@remix-run/react'
 import { db } from '~/utils/db.server'
 import { invariantResponse } from '~/utils/misc'
 
@@ -44,4 +44,18 @@ export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
 		{ title: `${displayName} | Epic Notes` },
 		{ name: 'description', content: `Profile of ${displayName} on Epic Notes` },
 	]
+}
+
+// Error boundary doesn't catch errors thrown in
+// event handlers, timeout callbacks. But it catches
+// errors in useEffect as it is in React's control
+export function ErrorBoundary() {
+	const error = useRouteError()
+	console.error(error)
+
+	return (
+		<div className="container mx-auto flex h-full w-full items-center justify-center bg-destructive p-20 text-h2 text-destructive-foreground">
+			<p>Oh no, something went wrong. Sorry about that.</p>
+		</div>
+	)
 }
