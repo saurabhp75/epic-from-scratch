@@ -30,6 +30,12 @@ export const db = singleton('db', () => {
 
 			owner: oneOf('user'),
 		},
+		image: {
+			id: primaryKey(getId),
+			filepath: String,
+			contentType: String,
+			altText: nullable(String),
+		},
 	})
 
 	const kody = db.user.create({
