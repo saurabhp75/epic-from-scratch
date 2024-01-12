@@ -111,6 +111,13 @@ export default function NoteEdit() {
 
 	const isHydrated = useHydrated()
 
+	const formHasErrors = Boolean(formErrors?.length)
+	const formErrorId = formHasErrors ? 'form-error' : undefined
+	const titleHasErrors = Boolean(fieldErrors?.title.length)
+	const titleErrorId = titleHasErrors ? 'title-error' : undefined
+	const contentHasErrors = Boolean(fieldErrors?.content.length)
+	const contentErrorId = contentHasErrors ? 'content-error' : undefined
+
 	return (
 		<div className="absolute inset-0">
 			<Form
@@ -122,38 +129,45 @@ export default function NoteEdit() {
 				noValidate={isHydrated}
 				method="POST"
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
+				aria-invalid={formHasErrors || undefined}
+				// aria-error is not supported on all browsers
+				// so we use aria-describedby
+				aria-describedby={formErrorId}
 			>
 				<div className="flex flex-col gap-1">
 					<div>
-						{/* 🦉 NOTE: this is not an accessible label, we'll get to that in the accessibility exercises */}
 						<Label htmlFor="note-title">Title</Label>
 						<Input
 							id="note-title"
 							name="title"
 							defaultValue={data.note.title}
 							required
-							maxLength={100}
+							maxLength={titleMaxLength}
+							aria-invalid={titleHasErrors || undefined}
+							aria-describedby={titleErrorId}
+							autoFocus
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.title} />
+							<ErrorList id={titleErrorId} errors={fieldErrors?.title} />
 						</div>
 					</div>
 					<div>
-						{/* 🦉 NOTE: this is not an accessible label, we'll get to that in the accessibility exercises */}
 						<Label htmlFor="note-content">Content</Label>
 						<Textarea
 							id="note-content"
 							name="content"
 							defaultValue={data.note.content}
 							required
-							maxLength={10000}
+							maxLength={contentMaxLength}
+							aria-invalid={contentHasErrors || undefined}
+							aria-describedby={contentErrorId}
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.content} />
+							<ErrorList id={contentErrorId} errors={fieldErrors?.content} />
 						</div>
 					</div>
 				</div>
-				<ErrorList errors={formErrors} />
+				<ErrorList id={formErrorId} errors={formErrors} />
 			</Form>
 			<div className={floatingToolbarClassName}>
 				<Button form={formId} variant="destructive" type="reset">
@@ -172,9 +186,15 @@ export default function NoteEdit() {
 	)
 }
 
-function ErrorList({ errors }: { errors?: Array<string> | null }) {
+function ErrorList({
+	errors,
+	id,
+}: {
+	errors?: Array<string> | null
+	id?: string
+}) {
 	return errors?.length ? (
-		<ul className="flex flex-col gap-1">
+		<ul className="flex flex-col gap-1" id={id}>
 			{errors.map((error, i) => (
 				<li key={i} className="text-[10px] text-foreground-destructive">
 					{error}
