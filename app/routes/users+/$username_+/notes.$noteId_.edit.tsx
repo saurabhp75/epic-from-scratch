@@ -6,7 +6,7 @@ import {
 	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
@@ -99,6 +99,7 @@ function useHydrated() {
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
+	const formRef = useRef<HTMLFormElement>(null)
 	// determine whether this form is submitting
 	const isSubmitting = useIsSubmitting()
 
@@ -118,6 +119,23 @@ export default function NoteEdit() {
 	const contentHasErrors = Boolean(fieldErrors?.content.length)
 	const contentErrorId = contentHasErrors ? 'content-error' : undefined
 
+	useEffect(() => {
+		const formEl = formRef.current
+		if (!formEl) return
+		if (actionData?.status !== 'error') return
+
+		// Focus the form if form has an error otherwise
+		// focus the first element which has an error
+		if (formEl.matches('[aria-invalid="true"]')) {
+			formEl.focus()
+		} else {
+			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
+			if (firstInvalid instanceof HTMLElement) {
+				firstInvalid.focus()
+			}
+		}
+	}, [actionData])
+
 	return (
 		<div className="absolute inset-0">
 			<Form
@@ -133,6 +151,10 @@ export default function NoteEdit() {
 				// aria-error is not supported on all browsers
 				// so we use aria-describedby
 				aria-describedby={formErrorId}
+				// Add a tabIndex={-1} here so we can programmatically focus on the form
+				// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex
+				ref={formRef}
+				tabIndex={-1}
 			>
 				<div className="flex flex-col gap-1">
 					<div>
