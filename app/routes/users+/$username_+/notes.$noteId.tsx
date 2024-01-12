@@ -24,7 +24,11 @@ export async function loader({ params }: LoaderFunctionArgs) {
 	invariantResponse(note, 'note not found', { status: 404 })
 
 	return json({
-		note: { title: note.title, content: note.content },
+		note: {
+			title: note.title,
+			content: note.content,
+			images: note.images.map(i => ({ id: i.id, altText: i.altText })),
+		},
 	})
 }
 
@@ -44,6 +48,20 @@ export default function SomeNoteId() {
 		<div className="absolute inset-0 flex flex-col px-10">
 			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.note?.title}</h2>
 			<div className="overflow-y-auto pb-24">
+				<ul className="flex flex-wrap gap-5 py-5">
+					{data.note.images.map(image => (
+						<li key={image.id}>
+							{/* eslint-disable-next-line remix-react-routes/use-link-for-routes */}
+							<a href={`/resources/images/${image.id}`}>
+								<img
+									src={`/resources/images/${image.id}`}
+									alt={image.altText ?? ''}
+									className="h-32 w-32 rounded-lg object-cover"
+								/>
+							</a>
+						</li>
+					))}
+				</ul>
 				<p className="whitespace-break-spaces text-sm md:text-lg">
 					{data.note?.content}
 				</p>
