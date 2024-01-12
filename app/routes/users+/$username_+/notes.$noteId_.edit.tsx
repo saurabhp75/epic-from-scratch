@@ -6,6 +6,7 @@ import {
 	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
+import { useEffect, useState } from 'react'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
@@ -89,6 +90,12 @@ export async function loader({ params }: LoaderFunctionArgs) {
 	})
 }
 
+function useHydrated() {
+	const [hydrated, setHydrated] = useState(false)
+	useEffect(() => setHydrated(true), [])
+	return hydrated
+}
+
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
@@ -102,15 +109,19 @@ export default function NoteEdit() {
 	const formErrors =
 		actionData?.status === 'error' ? actionData.errors.formErrors : null
 
+	const isHydrated = useHydrated()
+
 	return (
 		<div className="absolute inset-0">
 			<Form
 				id={formId}
-				// Use noValidate to disable client-side validation 
+				// Use noValidate to disable client-side validation
 				// and test out the server-side validation.
-				noValidate
+				// Disable HTML validation only when JS has loaded, as we expect JS
+				// todo client side validation, which will be done using ConformJS
+				noValidate={isHydrated}
 				method="POST"
-				className="flex h-full flex-col gap-y-4 overflow-x-hidden px-10 pb-28 pt-12"
+				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
 			>
 				<div className="flex flex-col gap-1">
 					<div>
