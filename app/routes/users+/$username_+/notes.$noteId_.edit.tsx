@@ -18,7 +18,7 @@ import { Input } from '~/components/ui/input'
 import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
 import { db } from '~/utils/db.server'
-import { invariantResponse } from '~/utils/misc'
+import { invariantResponse, useIsSubmitting } from '~/utils/misc'
 
 export async function action({ request, params }: ActionFunctionArgs) {
 	const formData = await request.formData()
@@ -54,12 +54,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	// determine whether this form is submitting
-	const navigation = useNavigation()
-	const formAction = useFormAction()
-	const isSubmitting =
-		navigation.state !== 'idle' &&
-		navigation.formMethod === 'POST' &&
-		navigation.formAction === formAction
+	const isSubmitting = useIsSubmitting()
 
 	return (
 		<Form
