@@ -14,7 +14,11 @@ import { Input } from '~/components/ui/input'
 import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
 import { db } from '~/utils/db.server'
-import { invariantResponse, useIsSubmitting } from '~/utils/misc'
+import {
+	invariantResponse,
+	useFocusInvalid,
+	useIsSubmitting,
+} from '~/utils/misc'
 
 type ActionErrors = {
 	formErrors: Array<string>
@@ -119,22 +123,7 @@ export default function NoteEdit() {
 	const contentHasErrors = Boolean(fieldErrors?.content.length)
 	const contentErrorId = contentHasErrors ? 'content-error' : undefined
 
-	useEffect(() => {
-		const formEl = formRef.current
-		if (!formEl) return
-		if (actionData?.status !== 'error') return
-
-		// Focus the form if form has an error otherwise
-		// focus the first element which has an error
-		if (formEl.matches('[aria-invalid="true"]')) {
-			formEl.focus()
-		} else {
-			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
-			if (firstInvalid instanceof HTMLElement) {
-				firstInvalid.focus()
-			}
-		}
-	}, [actionData])
+	useFocusInvalid(formRef.current, actionData?.status === 'error')
 
 	return (
 		<div className="absolute inset-0">
