@@ -6,6 +6,8 @@ import {
 	redirect,
 	type LoaderFunctionArgs,
 	type ActionFunctionArgs,
+	unstable_createMemoryUploadHandler as createMemoryUploadHandler,
+	unstable_parseMultipartFormData as parseMultipartFormData,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
@@ -21,6 +23,7 @@ import { cn, invariantResponse, useIsSubmitting } from '~/utils/misc'
 
 const titleMaxLength = 100
 const contentMaxLength = 10000
+const MAX_UPLOAD_SIZE = 1024 * 1024 * 3 // 3MB
 
 const NoteEditorSchema = z.object({
 	// We can optionally add an error message to zod
@@ -37,7 +40,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	// switch this for parseMultipartFormData and createMemoryUploadHandler
 	// set the `maxPartSize` setting to 3MB () 1024 * 1024 * 3) to prevent
 	// users from uploading files that are too large.
-	const formData = await request.formData()
+	// const formData = await request.formData()
+	const formData = await parseMultipartFormData(
+		request,
+		createMemoryUploadHandler({ maxPartSize: MAX_UPLOAD_SIZE }),
+	)
 
 	const submission = parse(formData, {
 		schema: NoteEditorSchema,
@@ -54,6 +61,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		id: params.noteId,
 		title,
 		content,
+		images: [
+			{
+				id: formData.get('imageId') ?? '',
+				file: formData.get('file') ?? null,
+				altText: formData.get('altText') ?? null,
+			},
+		],
 		// add an images array and pass an object that has the
 		// id, file, and altText that was submitted.
 		// Right now, we're just going to grab these values straight from formData.
@@ -113,6 +127,7 @@ export default function NoteEdit() {
 				method="POST"
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
 				{...form.props}
+				encType="multipart/form-data"
 			>
 				<div className="flex flex-col gap-1">
 					<div>
@@ -137,7 +152,7 @@ export default function NoteEdit() {
 					</div>
 					<div>
 						<Label>Image</Label>
-						{/* 🐨 render the ImageChooser and pass the note's first image as the image prop */}
+						<ImageChooser image={data.note.images[0]} />
 					</div>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
@@ -232,7 +247,10 @@ function ImageChooser({
 									➕
 								</div>
 							)}
-							{/* 🐨 if there's an existing image, add a hidden input with a name "imageId" and the value set to the image's id */}
+							{/* if there's an existing image, add a hidden input with a name "imageId" with the value of image's id */}
+							{existingImage ? (
+								<input name="imageId" type="hidden" value={image?.id} />
+							) : null}
 							<input
 								id="image-input"
 								aria-label="Image"
@@ -250,9 +268,11 @@ function ImageChooser({
 										setPreviewImage(null)
 									}
 								}}
-								// 🐨 add a name of "file" here:
+								// add a name of "file" here:
+								name="file"
 								type="file"
-								// 🐨 add accept="image/*" here so users only upload images
+								// add accept="image/*" here so users only upload images
+								accept="image/*"
 							/>
 						</label>
 					</div>
@@ -261,7 +281,8 @@ function ImageChooser({
 					<Label htmlFor="alt-text">Alt Text</Label>
 					<Textarea
 						id="alt-text"
-						// 🐨 add a name of "altText" here
+						// add a name of "altText" here
+						name="altText"
 						defaultValue={altText}
 						onChange={e => setAltText(e.currentTarget.value)}
 					/>
