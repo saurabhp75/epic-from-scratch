@@ -89,7 +89,6 @@ export const meta: MetaFunction<
 	typeof loader,
 	{ 'routes/users+/$username_+/notes': typeof notesLoader }
 > = ({ data, params, matches }) => {
-	console.log({ data })
 
 	// use matches to find the route for notes by that ID
 	// matches.find(m => m.id === 'routes/users+/$username_+/notes')

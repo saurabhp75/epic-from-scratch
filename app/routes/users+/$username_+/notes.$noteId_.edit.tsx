@@ -196,7 +196,6 @@ export function ErrorBoundary() {
 	)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ImageChooser({
 	image,
 }: {
