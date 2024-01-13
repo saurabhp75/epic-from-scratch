@@ -32,15 +32,19 @@ const NoteEditorSchema = z.object({
 		.min(1, { message: 'title is required' })
 		.max(titleMaxLength),
 	content: z.string().min(1).max(contentMaxLength),
+	imageId: z.string().optional(),
+	altText: z.string().optional(),
+	file: z
+		.instanceof(File)
+		.refine(file => {
+			return file.size <= MAX_UPLOAD_SIZE
+		}, 'File size must be less than 3MB')
+		.optional(),
 })
 
 export async function action({ request, params }: ActionFunctionArgs) {
 	invariantResponse(params.noteId, 'noteId param is required')
 
-	// switch this for parseMultipartFormData and createMemoryUploadHandler
-	// set the `maxPartSize` setting to 3MB () 1024 * 1024 * 3) to prevent
-	// users from uploading files that are too large.
-	// const formData = await request.formData()
 	const formData = await parseMultipartFormData(
 		request,
 		createMemoryUploadHandler({ maxPartSize: MAX_UPLOAD_SIZE }),
@@ -55,25 +59,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content } = submission.value
+	const { title, content, file, imageId, altText } = submission.value
 
 	await updateNote({
 		id: params.noteId,
 		title,
 		content,
-		images: [
-			{
-				id: formData.get('imageId') ?? '',
-				file: formData.get('file') ?? null,
-				altText: formData.get('altText') ?? null,
-			},
-		],
-		// add an images array and pass an object that has the
-		// id, file, and altText that was submitted.
-		// Right now, we're just going to grab these values straight from formData.
-		// formData.get('file'), etc.
-		// In the next step, we'll add this to the Zod schema.
-		// TypeScript won't like this. We'll fix it in the next step, so don't worry about it.
+		images: [{ file, id: imageId, altText }],
 	})
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
