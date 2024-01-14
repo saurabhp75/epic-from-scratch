@@ -3,6 +3,7 @@ import {
 	conform,
 	useFieldset,
 	useForm,
+	useFieldList,
 } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import { Label } from '@radix-ui/react-label'
@@ -48,7 +49,7 @@ const NoteEditorSchema = z.object({
 		.min(1, { message: 'title is required' })
 		.max(titleMaxLength),
 	content: z.string().min(1).max(contentMaxLength),
-	image: ImageFieldsetSchema,
+	images: z.array(ImageFieldsetSchema),
 })
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -68,13 +69,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content, image } = submission.value
+	const { title, content, images } = submission.value
 
 	await updateNote({
 		id: params.noteId,
 		title,
 		content,
-		images: [image],
+		images,
 	})
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
@@ -119,9 +120,11 @@ export default function NoteEdit() {
 		defaultValue: {
 			title: data.note.title,
 			content: data.note.content,
-			image: data.note.images[0],
+			images: data.note.images.length ? data.note.images : [{}],
 		},
 	})
+
+	const imageList = useFieldList(form.ref, fields.images)
 
 	return (
 		<div className="absolute inset-0">
@@ -153,8 +156,17 @@ export default function NoteEdit() {
 						</div>
 					</div>
 					<div>
-						<Label>Image</Label>
-						<ImageChooser config={fields.image} />
+						<Label>Images</Label>
+						<ul className="flex flex-col gap-4">
+							{imageList.map((image, index) => (
+								<li
+									className="relative border-b-2 border-muted-foreground"
+									key={image.key}
+								>
+									<ImageChooser config={image} />
+								</li>
+							))}
+						</ul>
 					</div>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
