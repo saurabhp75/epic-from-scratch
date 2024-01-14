@@ -4,6 +4,7 @@ import {
 	useFieldset,
 	useForm,
 	useFieldList,
+	list,
 } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import { Label } from '@radix-ui/react-label'
@@ -63,6 +64,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	const submission = parse(formData, {
 		schema: NoteEditorSchema,
 	})
+
+	if (submission.intent !== 'submit') {
+		return json({ status: 'idle', submission } as const)
+	}
 
 	if (!submission.value) {
 		// Send the submitted data back in case of error
@@ -134,6 +139,12 @@ export default function NoteEdit() {
 				{...form.props}
 				encType="multipart/form-data"
 			>
+				{/*
+					This hidden submit button here ensures that when the user hits
+					"enter" on an input field, the primary form function is submitted
+					rather than the first button in the form (which is delete/add image).
+				*/}
+				<button type="submit" className="hidden" />
 				<div className="flex flex-col gap-1">
 					<div>
 						<Label htmlFor="note-title">Title</Label>
@@ -163,11 +174,25 @@ export default function NoteEdit() {
 									className="relative border-b-2 border-muted-foreground"
 									key={image.key}
 								>
+									<button
+										className="absolute right-0 top-0 text-foreground-destructive"
+										{...list.remove(fields.images.name, { index })}
+									>
+										<span aria-hidden>❌</span>{' '}
+										<span className="sr-only">Remove image {index + 1}</span>
+									</button>
 									<ImageChooser config={image} />
 								</li>
 							))}
 						</ul>
 					</div>
+					<Button
+						className="mt-3"
+						{...list.insert(fields.images.name, { defaultValue: {} })}
+					>
+						<span aria-hidden>➕ Image</span>{' '}
+						<span className="sr-only">Add image</span>
+					</Button>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
 			</Form>
