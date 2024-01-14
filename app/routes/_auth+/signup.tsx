@@ -4,16 +4,25 @@ import {
 	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form } from '@remix-run/react'
+import { HoneypotInputs } from 'remix-utils/honeypot/react'
+import { SpamError } from 'remix-utils/honeypot/server'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
-import { invariantResponse } from '~/utils/misc'
+import { honeypot } from '~/utils/honeypot.server'
 
 export async function action({ request }: ActionFunctionArgs) {
 	const formData = await request.formData()
 	// throw a 400 response if the name field is filled out
 	// we'll implement signup later
-	invariantResponse(!formData.get('name'), 'Form not submitted properly')
+	try {
+		honeypot.check(formData)
+	} catch (error) {
+		if (error instanceof SpamError) {
+			throw new Response('Form not submitted properly', { status: 400 })
+		}
+		throw error
+	}
 	return redirect('/')
 }
 
@@ -38,10 +47,7 @@ export default function SignupRoute() {
 						Add a label to tell the user to not fill out
 						the field in case they somehow notice it.
 					*/}
-					<div style={{ display: 'none' }} aria-hidden>
-						<label htmlFor="name-input">Please leave this field blank</label>
-						<input id="name-input" name="name" type="text" />
-					</div>
+					<HoneypotInputs />
 					<div>
 						<Label htmlFor="email-input">Email</Label>
 						<Input autoFocus id="email-input" name="email" type="email" />
