@@ -9,10 +9,12 @@ import { SpamError } from 'remix-utils/honeypot/server'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
+import { validateCSRF } from '~/utils/csrf.server'
 import { honeypot } from '~/utils/honeypot.server'
 
 export async function action({ request }: ActionFunctionArgs) {
 	const formData = await request.formData()
+	await validateCSRF(formData, request.headers)
 	// throw a 400 response if the name field is filled out
 	// we'll implement signup later
 	try {
