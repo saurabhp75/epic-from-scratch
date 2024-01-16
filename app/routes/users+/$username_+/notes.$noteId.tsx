@@ -7,11 +7,10 @@ import {
 } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
-import { CSRFError } from 'remix-utils/csrf/server'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
-import { csrf } from '~/utils/csrf.server'
+import { validateCSRF } from '~/utils/csrf.server'
 import { db } from '~/utils/db.server'
 import { invariantResponse } from '~/utils/misc'
 import { type loader as notesLoader } from './notes'
@@ -41,15 +40,8 @@ export async function action({ params, request }: ActionFunctionArgs) {
 
 	invariantResponse(intent === 'delete', 'Invalid intent')
 
-	try {
-		await csrf.validate(formData, request.headers)
-	} catch (error) {
-		if (error instanceof CSRFError) {
-			throw new Response('Invalid CSRF token', { status: 403 })
-		}
-		throw error
-	}
-	
+	await validateCSRF(formData, request.headers)
+
 	db.note.delete({ where: { id: { equals: params.noteId } } })
 	return redirect(`/users/${params.username}/notes`)
 }
@@ -81,7 +73,7 @@ export default function SomeNoteId() {
 			</div>
 			<div className={floatingToolbarClassName}>
 				<Form method="POST">
-					<AuthenticityTokenInput/>
+					<AuthenticityTokenInput />
 					<Button
 						name="intent"
 						value="delete"
@@ -103,7 +95,6 @@ export const meta: MetaFunction<
 	typeof loader,
 	{ 'routes/users+/$username_+/notes': typeof notesLoader }
 > = ({ data, params, matches }) => {
-
 	// use matches to find the route for notes by that ID
 	// matches.find(m => m.id === 'routes/users+/$username_+/notes')
 
