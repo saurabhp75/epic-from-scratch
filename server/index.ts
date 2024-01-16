@@ -73,14 +73,37 @@ app.use(morgan('tiny'))
 
 const limitMultiple = process.env.TESTING ? 10_000 : 1
 
-app.use(
-	rateLimit({
-		windowMs: 60 * 1000,
-		limit: 10 * limitMultiple,
-		standardHeaders: true,
-		legacyHeaders: false,
-	}),
-)
+const rateLimitDefault = {
+	windowMs: 60 * 1000,
+	limit: 1000 * limitMultiple,
+	standardHeaders: true,
+	legacyHeaders: false,
+}
+
+const strongestRateLimit = rateLimit({
+	...rateLimitDefault,
+	limit: 2,
+	// limit: 10 * limitMultiple,
+})
+
+const strongRateLimit = rateLimit({
+	...rateLimitDefault,
+	limit: 100 * limitMultiple,
+})
+
+const generalRateLimit = rateLimit(rateLimitDefault)
+
+app.use((req, res, next) => {
+	const strongPaths = ['/signup']
+	if (req.method !== 'GET' && req.method !== 'HEAD') {
+		if (strongPaths.some(p => req.path.includes(p))) {
+			return strongestRateLimit(req, res, next)
+		}
+		return strongRateLimit(req, res, next)
+	}
+
+	return generalRateLimit(req, res, next)
+})
 
 app.use((_, res, next) => {
 	res.locals.cspNonce = crypto.randomBytes(16).toString('hex')
