@@ -1,6 +1,11 @@
 import os from 'node:os'
 import { cssBundleHref } from '@remix-run/css-bundle'
-import { type LinksFunction, json, type MetaFunction } from '@remix-run/node'
+import {
+	type LinksFunction,
+	json,
+	type MetaFunction,
+	type LoaderFunctionArgs,
+} from '@remix-run/node'
 import {
 	Link,
 	Links,
@@ -17,6 +22,7 @@ import faviconAssetUrl from './assets/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import { csrf } from './utils/csrf.server'
 import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
 
@@ -46,13 +52,15 @@ export const meta: MetaFunction = () => {
 	]
 }
 
-export async function loader() {
+export async function loader({ request }: LoaderFunctionArgs) {
 	const honeyProps = honeypot.getInputProps()
-	return json({
-		username: os.userInfo().username,
-		ENV: getEnv(),
-		honeyProps,
-	})
+	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
+	return json(
+		{ username: os.userInfo().username, ENV: getEnv(), honeyProps, csrfToken },
+		{
+			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
+		},
+	)
 }
 
 function App() {
