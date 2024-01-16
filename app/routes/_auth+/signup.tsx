@@ -4,6 +4,7 @@ import {
 	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form } from '@remix-run/react'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { SpamError } from 'remix-utils/honeypot/server'
 import { Button } from '~/components/ui/button'
@@ -42,6 +43,7 @@ export default function SignupRoute() {
 					method="POST"
 					className="mx-auto flex min-w-[368px] max-w-sm flex-col gap-4"
 				>
+					<AuthenticityTokenInput />
 					{/* Render a hidden div with an "name" input */}
 					{/* Think about the accessibility implications. */}
 					{/* Make sure screen readers will ignore this field */}
