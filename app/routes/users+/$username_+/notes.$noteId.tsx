@@ -6,9 +6,12 @@ import {
 	type MetaFunction,
 } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { CSRFError } from 'remix-utils/csrf/server'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
+import { csrf } from '~/utils/csrf.server'
 import { db } from '~/utils/db.server'
 import { invariantResponse } from '~/utils/misc'
 import { type loader as notesLoader } from './notes'
@@ -37,6 +40,16 @@ export async function action({ params, request }: ActionFunctionArgs) {
 	const intent = formData.get('intent')
 
 	invariantResponse(intent === 'delete', 'Invalid intent')
+
+	try {
+		await csrf.validate(formData, request.headers)
+	} catch (error) {
+		if (error instanceof CSRFError) {
+			throw new Response('Invalid CSRF token', { status: 403 })
+		}
+		throw error
+	}
+	
 	db.note.delete({ where: { id: { equals: params.noteId } } })
 	return redirect(`/users/${params.username}/notes`)
 }
@@ -68,6 +81,7 @@ export default function SomeNoteId() {
 			</div>
 			<div className={floatingToolbarClassName}>
 				<Form method="POST">
+					<AuthenticityTokenInput/>
 					<Button
 						name="intent"
 						value="delete"
