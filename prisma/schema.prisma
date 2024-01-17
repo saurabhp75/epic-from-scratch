@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Following command gives sql to replicate the db
+// sqlite3 prisma/data.db .dump > data.sql
+// npx prisma migrate deploy ; creates a single migration file
+// npx prisma migrate dev ;  run this before deploy command
+// npx prisma migrate reset ;  run this to apply migrations to db
+// Widen then narrow approach:
+// Widen app to consume A or B
+// Widen db to provide A and B and the app to write to both A and B
+// Narrow app to consume B and only write to B
+// Narrow db to provide B
+// https://www.notion.so/03-Data-Migrations-Data-Modeling-Deep-Dive-a7b8f261357840cb8c9177e2b1397961
+
+// index takes more space and it takes more time to add records
+// but they make mutations faster sometimes
+// Most of the times, the read speed is more important than write speed
+// Things to consider indexing
+// 1. Primary keys: Done by default
+// 2. Unique keys: handled by Prisma
+// 3. Non unique foreign keys: Opportunity for indexing
+// Things to consider for indexing
+// "WHERE" clause stuff
+// "ORDERBY" clause stuff
+// Identify indexing opportinities
+// Use sql query: EXPLAIN QUERY PLAN SELECT * FROM user WHERE name = 'Alice';
+// Look for scan and search without an index
+// Creating index manually using sql
+// CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+// Creating index manually using Prisma
+// @@index[fieldname1, fieldname2 ...]  // normally at the most 2 keys are used for indexing
+// "npx prisms db reset" : clear the db, run all the migrations and then run seed script.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

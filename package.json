@@ -17,11 +17,15 @@
     "/playwright-report",
     "/server-build"
   ],
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@conform-to/dom": "^0.9.1",
     "@conform-to/react": "^0.9.1",
     "@conform-to/zod": "^0.9.1",
     "@mswjs/data": "^0.16.1",
+    "@prisma/client": "^5.8.1",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@remix-run/css-bundle": "^2.4.1",
@@ -39,6 +43,7 @@
     "get-port": "^7.0.0",
     "isbot": "^3.6.8",
     "prettier-plugin-tailwindcss": "^0.5.11",
+    "prisma": "^5.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remix-flat-routes": "^0.6.4",
