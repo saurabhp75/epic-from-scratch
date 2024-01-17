@@ -31,6 +31,7 @@
 // Creating index manually using Prisma
 // @@index[fieldname1, fieldname2 ...]  // normally at the most 2 keys are used for indexing
 // "npx prisms db reset" : clear the db, run all the migrations and then run seed script.
+// Use npx tsx ./prisma/seed.ts to seed the db
 
 generator client {
   provider = "prisma-client-js"
@@ -48,4 +49,42 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  image UserImage?
+  notes Note[]
+}
+
+model Note {
+  id        String      @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  // Here, one to many relationship (owner) is defined and known by the 
+  // Note and not User, User is not aware of this relationship
+  owner     User        @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  ownerId   String // Absense of "@unique" makes the relationship one to many 
+  images    NoteImage[]
+}
+
+model NoteImage {
+  id          String   @id @default(cuid())
+  altText     String?
+  contentType String
+  blob        Bytes // The image will be stored in the database as a blob
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  noteId      String // Absense of "@unique" makes the relationship one to many 
+}
+
+model UserImage {
+  id          String   @id @default(cuid())
+  altText     String?
+  contentType String
+  blob        Bytes // The image will be stored in the database as a blob
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId      String   @unique // "@unique" makes the relationship one to one 
 }
