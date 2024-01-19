@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -6,6 +7,26 @@ const prisma = new PrismaClient()
 // delete all users, this will delete all the notes and images
 // associated with the user due to cascade defined in the schema
 await prisma.user.deleteMany()
+
+await prisma.user.create({
+	data: {
+		email: faker.internet.email(),
+		username: faker.internet.userName(),
+		name: faker.person.fullName(),
+		notes: {
+			create: [
+				{
+					title: faker.lorem.sentence(),
+					content: faker.lorem.paragraphs(),
+				},
+				{
+					title: faker.lorem.sentence(),
+					content: faker.lorem.paragraphs(),
+				},
+			],
+		},
+	},
+})
 
 await prisma.user.create({
 	data: {
