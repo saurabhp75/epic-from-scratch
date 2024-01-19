@@ -3,15 +3,25 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-const firstNote = await prisma.note.findFirst()
+// delete all users, this will delete all the notes and images
+// associated with the user due to cascade defined in the schema
+await prisma.user.deleteMany()
 
-if (!firstNote) {
-	throw new Error('You need to have a note in the database first')
-}
-
-await prisma.note.update({
-	where: { id: firstNote.id },
+const kody = await prisma.user.create({
 	data: {
+		email: 'kody@kcd.dev',
+		username: 'kody',
+		name: 'Kody',
+	},
+})
+
+await prisma.note.create({
+	data: {
+		id: 'd27a197e',
+		title: 'Basic Koala Facts',
+		content:
+			'Koalas are found in the eucalyptus forests of eastern Australia. They have grey fur with a cream-coloured chest, and strong, clawed feet, perfect for living in the branches of trees!',
+		ownerId: kody.id,
 		images: {
 			create: [
 				{
