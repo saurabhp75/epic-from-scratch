@@ -1,26 +1,24 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
-import { db } from '~/utils/db.server'
-import { cn, invariantResponse } from '~/utils/misc'
+import { prisma } from '~/utils/db.server'
+import { cn, getUserImgSrc, invariantResponse } from '~/utils/misc'
 
 export async function loader({ params }: LoaderFunctionArgs) {
-	const { username } = params
-	const owner = db.user.findFirst({
-		where: {
-			username: { equals: username },
+	// Nest related queries (notes and images)
+	const owner = await prisma.user.findFirst({
+		select: {
+			name: true,
+			username: true,
+			image: { select: { id: true } },
+			notes: { select: { id: true, title: true } },
 		},
-	})
-	invariantResponse(owner, 'owner not found', { status: 404 })
-	const notes = db.note.findMany({
-		where: {
-			owner: {
-				username: { equals: username },
-			},
-		},
+		where: { username: params.username },
 	})
 
-	return json({ owner, notes })
+	invariantResponse(owner, 'owner not found', { status: 404 })
+
+	return json({ owner })
 }
 export default function NotesRoute() {
 	const data = useLoaderData<typeof loader>()
@@ -35,12 +33,17 @@ export default function NotesRoute() {
 				<div className="relative col-span-1">
 					<div className="absolute inset-0 flex flex-col">
 						<Link to=".." relative="path" className="pb-4 pl-8 pr-4 pt-12">
+							<img
+								src={getUserImgSrc(data.owner.image?.id)}
+								alt={ownerDisplayName}
+								className="h-16 w-16 rounded-full object-cover lg:h-24 lg:w-24"
+							/>
 							<h1 className="text-base font-bold md:text-lg lg:text-left lg:text-2xl">
 								{`${ownerDisplayName}'s Notes`}
 							</h1>
 						</Link>
 						<ul className="overflow-y-auto overflow-x-hidden pb-12">
-							{data.notes.map(note => (
+							{data.owner.notes.map(note => (
 								<li key={note.id} className="p-1 pr-0">
 									<NavLink
 										to={note.id}
@@ -64,7 +67,6 @@ export default function NotesRoute() {
 		</main>
 	)
 }
-
 
 export function ErrorBoundary() {
 	return (

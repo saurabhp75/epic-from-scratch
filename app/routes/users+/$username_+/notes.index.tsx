@@ -21,7 +21,7 @@ export const meta: MetaFunction<
 		m => m.id === 'routes/users+/$username_+/notes',
 	)
 	const displayName = notesMatch?.data?.owner.name ?? params.username
-	const noteCount = notesMatch?.data?.notes.length ?? 0
+	const noteCount = notesMatch?.data?.owner.notes.length ?? 0
 	const notesText = noteCount === 1 ? 'note' : 'notes'
 	return [
 		{ title: `${displayName}'s Notes | Epic Notes` },
