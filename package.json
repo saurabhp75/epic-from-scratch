@@ -26,6 +26,7 @@
     "@conform-to/react": "^0.9.1",
     "@conform-to/zod": "^0.9.1",
     "@mswjs/data": "^0.16.1",
+    "@paralleldrive/cuid2": "^2.2.2",
     "@prisma/client": "^5.8.1",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",

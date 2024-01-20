@@ -7,6 +7,7 @@ import {
 	list,
 } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
+import { createId as cuid } from '@paralleldrive/cuid2'
 import { Label } from '@radix-ui/react-label'
 import {
 	json,
@@ -27,8 +28,13 @@ import { Input } from '~/components/ui/input'
 import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
 import { validateCSRF } from '~/utils/csrf.server'
-import { db, updateNote } from '~/utils/db.server'
-import { cn, invariantResponse, useIsSubmitting } from '~/utils/misc'
+import { prisma } from '~/utils/db.server'
+import {
+	cn,
+	getNoteImgSrc,
+	invariantResponse,
+	useIsSubmitting,
+} from '~/utils/misc'
 
 const titleMaxLength = 100
 const contentMaxLength = 10000
@@ -44,6 +50,20 @@ const ImageFieldsetSchema = z.object({
 		.optional(),
 	altText: z.string().optional(),
 })
+
+type ImageFieldset = z.infer<typeof ImageFieldsetSchema>
+
+function imageHasFile(
+	image: ImageFieldset,
+): image is ImageFieldset & { file: NonNullable<ImageFieldset['file']> } {
+	return Boolean(image.file?.size && image.file?.size > 0)
+}
+
+function imageHasId(
+	image: ImageFieldset,
+): image is ImageFieldset & { id: NonNullable<ImageFieldset['id']> } {
+	return image.id != null
+}
 
 const NoteEditorSchema = z.object({
 	// We can optionally add an error message to zod
@@ -65,8 +85,39 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	await validateCSRF(formData, request.headers)
 
-	const submission = parse(formData, {
-		schema: NoteEditorSchema,
+	const submission = await parse(formData, {
+		schema: NoteEditorSchema.transform(async ({ images = [], ...data }) => {
+			return {
+				...data,
+				imageUpdates: await Promise.all(
+					images.filter(imageHasId).map(async i => {
+						if (imageHasFile(i)) {
+							return {
+								id: i.id,
+								altText: i.altText,
+								contentType: i.file.type,
+								blob: Buffer.from(await i.file.arrayBuffer()),
+							}
+						} else {
+							return { id: i.id, altText: i.altText }
+						}
+					}),
+				),
+				newImages: await Promise.all(
+					images
+						.filter(imageHasFile)
+						.filter(i => !i.id)
+						.map(async image => {
+							return {
+								altText: image.altText,
+								contentType: image.file.type,
+								blob: Buffer.from(await image.file.arrayBuffer()),
+							}
+						}),
+				),
+			}
+		}),
+		async: true,
 	})
 
 	if (submission.intent !== 'submit') {
@@ -78,36 +129,65 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content, images } = submission.value
+	const { title, content, imageUpdates = [], newImages = [] } = submission.value
 
-	await updateNote({
-		id: params.noteId,
-		title,
-		content,
-		images,
+	// Update the note's title and content
+	await prisma.note.update({
+		select: { id: true },
+		where: { id: params.noteId },
+		data: { title, content },
 	})
+
+	// use deleteMany on the noteImage to delete all images where:
+	// - their noteId is the params.noteId
+	// - their id is not in the imageUpdates array (imageUpdates.map(i => i.id))
+	//   https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#notin
+	//   https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#deletemany
+	await prisma.noteImage.deleteMany({
+		where: {
+			id: { notIn: imageUpdates.map(i => i.id) },
+			noteId: params.noteId,
+		},
+	})
+
+	// iterate all the imageUpdates and update the image.
+	// If there's a blob, then set the id to a new cuid() (check the imports above)
+	// so we handle caching properly.
+	for (const updates of imageUpdates) {
+		await prisma.noteImage.update({
+			select: { id: true },
+			where: { id: updates.id },
+			// update the image-id to invalidate the cache
+			data: { ...updates, id: updates.blob ? cuid() : updates.id },
+		})
+	}
+
+	// iterate over the newImages and create a new noteImage for each one.
+	for (const newImage of newImages) {
+		await prisma.noteImage.create({
+			select: { id: true },
+			data: { ...newImage, noteId: params.noteId },
+		})
+	}
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
 
 export async function loader({ params }: LoaderFunctionArgs) {
-	const note = db.note.findFirst({
-		where: {
-			id: {
-				equals: params.noteId,
+	const note = await prisma.note.findFirst({
+		where: { id: params.noteId },
+		select: {
+			title: true,
+			content: true,
+			images: {
+				select: { id: true, altText: true },
 			},
 		},
 	})
 
 	invariantResponse(note, 'Note not found', { status: 404 })
 
-	return json({
-		note: {
-			title: note.title,
-			content: note.content,
-			images: note.images.map(i => ({ id: i.id, altText: i.altText })),
-		},
-	})
+	return json({ note })
 }
 
 export default function NoteEdit() {
@@ -258,7 +338,7 @@ function ImageChooser({
 	const fields = useFieldset(ref, config)
 	const existingImage = Boolean(fields.id.defaultValue)
 	const [previewImage, setPreviewImage] = useState<string | null>(
-		existingImage ? `/resources/images/${fields.id.defaultValue}` : null,
+		fields.id.defaultValue ? getNoteImgSrc(fields.id.defaultValue) : null,
 	)
 	const [altText, setAltText] = useState(fields.altText.defaultValue ?? '')
 
