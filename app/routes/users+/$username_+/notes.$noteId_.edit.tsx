@@ -121,6 +121,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		async: true,
 	})
 
+	// If the submission.intent is not "submit" then return the submission with
+	// a status of 'idle' and the submission.
+	// when will this usecase happen?
 	if (submission.intent !== 'submit') {
 		return json({ status: 'idle', submission } as const)
 	}
@@ -132,51 +135,35 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	const { title, content, imageUpdates = [], newImages = [] } = submission.value
 
-	await prisma.$transaction(async $prisma => {
-		// Update the note's title and content
-		await $prisma.note.update({
-			select: { id: true },
-			where: { id: params.noteId },
-			data: { title, content },
-		})
-
-		// use deleteMany on the noteImage to delete all images where:
-		// - their noteId is the params.noteId
-		// - their id is not in the imageUpdates array (imageUpdates.map(i => i.id))
-		// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#notin
-		// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#deletemany
-		await $prisma.noteImage.deleteMany({
-			where: {
-				id: { notIn: imageUpdates.map(i => i.id) },
-				noteId: params.noteId,
+	// Update the note's title and content
+	await prisma.note.update({
+		select: { id: true },
+		where: { id: params.noteId },
+		data: {
+			title,
+			content,
+			images: {
+				// use deleteMany on the noteImage to delete all images where:
+				// - their noteId is the params.noteId
+				// - their id is not in the imageUpdates array (imageUpdates.map(i => i.id))
+				// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#notin
+				//  https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#deletemany
+				deleteMany: { id: { notIn: imageUpdates.map(i => i.id) } },
+				// iterate all the imageUpdates and update the image.
+				// If there's a blob, then set the id to a new cuid() (check the imports above)
+				// so we handle caching properly.
+				updateMany: imageUpdates.map(updates => ({
+					where: { id: updates.id },
+					data: { ...updates, id: updates.blob ? cuid() : updates.id },
+				})),
+				// iterate over the newImages and create a new noteImage for each one.
+				create: newImages,
 			},
-		})
-
-		// Throw the error and confirm that the transaction rolled back
-		// throw new Error('Gotcha 🧝‍♂️, https://kcd.im/promises')
-
-		// iterate all the imageUpdates and update the image.
-		// If there's a blob, then set the id to a new cuid() (check the imports above)
-		// so we handle caching properly.
-		for (const updates of imageUpdates) {
-			await $prisma.noteImage.update({
-				select: { id: true },
-				where: { id: updates.id },
-				// update the image-id to invalidate the cache
-				data: { ...updates, id: updates.blob ? cuid() : updates.id },
-			})
-		}
-
-		// iterate over the newImages and create a new noteImage for each one.
-		for (const newImage of newImages) {
-			await $prisma.noteImage.create({
-				select: { id: true },
-				data: { ...newImage, noteId },
-			})
-		}
-		// Throw the error and confirm that the transaction rolled back
-		// throw new Error('Gotcha 🧝‍♂️, https://kcd.im/promises')
+		},
 	})
+
+	// Throw the error and confirm that the transaction rolled back
+	// throw new Error('Gotcha 🧝‍♂️, https://kcd.im/promises')
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
