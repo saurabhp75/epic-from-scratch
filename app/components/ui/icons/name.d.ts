@@ -17,3 +17,4 @@ export type IconName =
 	| 'exit'
 	| 'file-text'
 	| 'github-logo'
+	| 'magnifying-glass'
