@@ -7,17 +7,25 @@ import { Link, useLoaderData } from '@remix-run/react'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { Spacer } from '~/components/spacer'
 import { Button } from '~/components/ui/button'
-import { db } from '~/utils/db.server'
+import { prisma } from '~/utils/db.server'
 import { getUserImgSrc, invariantResponse } from '~/utils/misc'
 
 export async function loader({ params }: LoaderFunctionArgs) {
-	const { username } = params
-
-	const user = db.user.findFirst({
+	const user = await prisma.user.findFirst({
+		// Select only the needed columns
+		select: {
+			name: true,
+			username: true,
+			createdAt: true,
+			// Only the id of image is needed on the page
+			image: { select: { id: true } },
+		},
 		where: {
-			username: { equals: username },
+			username: params.username,
 		},
 	})
+
+	console.log({ user })
 
 	// Replaced by invariantResponse() utility
 	// if (!user) {
@@ -26,11 +34,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 	invariantResponse(user, 'user not found', { status: 404 })
 
 	return json({
-		user: {
-			name: user.name,
-			username: user.username,
-			image: user.image ? { id: user.image.id } : undefined,
-		},
+		user,
 		userJoinedDisplay: new Date(user.createdAt).toLocaleDateString(),
 	})
 }

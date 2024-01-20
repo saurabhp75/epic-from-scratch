@@ -63,7 +63,7 @@ const prisma = singleton('prisma', () => {
 })
 
 // If you want to test things out before moving on, go ahead and uncomment this:
-console.log(await prisma.user.findMany())
+// console.log(await prisma.user.findMany())
 // The run the app and you should see the query log in the console.
 
 export { prisma }
