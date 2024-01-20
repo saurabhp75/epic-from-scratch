@@ -1,9 +1,19 @@
 import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Link, useLoaderData } from '@remix-run/react'
+import { z } from 'zod'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
+import { ErrorList } from '~/components/forms'
 import { SearchBar } from '~/components/search-bar'
 import { prisma } from '~/utils/db.server'
 import { cn, getUserImgSrc, useDelayedIsPending } from '~/utils/misc'
+
+const UserSearchResultSchema = z.object({
+	id: z.string(),
+	username: z.string(),
+	name: z.string().nullable(),
+})
+
+const UserSearchResultsSchema = z.array(UserSearchResultSchema)
 
 export async function loader({ request }: DataFunctionArgs) {
 	const searchTerm = new URL(request.url).searchParams.get('search')
@@ -20,14 +30,24 @@ export async function loader({ request }: DataFunctionArgs) {
 
 	const like = `%${searchTerm ?? ''}%`
 
-	const users = await prisma.$queryRaw`
+	const rawUsers = await prisma.$queryRaw`
 		SELECT id, username, name
 		FROM User
 		WHERE username LIKE ${like}
 		OR name LIKE ${like}
 		LIMIT 50
 	`
-	return json({ status: 'idle', users } as const)
+
+	// use your new schema to safely parse the rawUsers.
+	// If there's an error, then return json with the error (result.error.message)
+	// If there is not an error, then return json with the users
+	const result = UserSearchResultsSchema.safeParse(rawUsers)
+	if (!result.success) {
+		return json({ status: 'error', error: result.error.message } as const, {
+			status: 400,
+		})
+	}
+	return json({ status: 'idle', users: result.data } as const)
 }
 
 export default function UsersRoute() {
@@ -45,7 +65,6 @@ export default function UsersRoute() {
 			</div>
 			<main>
 				{data.status === 'idle' ? (
-					// @ts-expect-error 🦺 we'll fix this next
 					data.users.length ? (
 						<ul
 							className={cn(
@@ -53,7 +72,6 @@ export default function UsersRoute() {
 								{ 'opacity-50': isPending },
 							)}
 						>
-							{/* @ts-expect-error 🦺 we'll fix this next */}
 							{data.users.map(user => (
 								<li key={user.id}>
 									<Link
@@ -62,6 +80,7 @@ export default function UsersRoute() {
 									>
 										<img
 											alt={user.name ?? user.username}
+											// @ts-expect-error, we'll fix this next
 											src={getUserImgSrc(user.image?.id)}
 											className="h-16 w-16 rounded-full"
 										/>
@@ -80,6 +99,8 @@ export default function UsersRoute() {
 					) : (
 						<p>No users found</p>
 					)
+				) : data.status === 'error' ? (
+					<ErrorList errors={['There was an error parsing the results']} />
 				) : null}
 			</main>
 		</div>
