@@ -23,8 +23,8 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
+import { ErrorList, Field, TextareaField } from '~/components/forms'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
 import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
 import { validateCSRF } from '~/utils/csrf.server'
@@ -226,26 +226,21 @@ export default function NoteEdit() {
 				*/}
 				<button type="submit" className="hidden" />
 				<div className="flex flex-col gap-1">
-					<div>
-						<Label htmlFor="note-title">Title</Label>
-						<Input autoFocus {...conform.input(fields.title)} />
-						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList
-								id={fields.title.errorId}
-								errors={fields.title.errors}
-							/>
-						</div>
-					</div>
-					<div>
-						<Label htmlFor={fields.content.id}>Content</Label>
-						<Textarea {...conform.textarea(fields.content)} />
-						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList
-								id={fields.content.errorId}
-								errors={fields.content.errors}
-							/>
-						</div>
-					</div>
+					<Field
+						labelProps={{ children: 'Title' }}
+						inputProps={{
+							autoFocus: true,
+							...conform.input(fields.title),
+						}}
+						errors={fields.title.errors}
+					/>
+					<TextareaField
+						labelProps={{ children: 'Content' }}
+						textareaProps={{
+							...conform.textarea(fields.content),
+						}}
+						errors={fields.content.errors}
+					/>
 					<div>
 						<Label>Images</Label>
 						<ul className="flex flex-col gap-4">
@@ -291,24 +286,6 @@ export default function NoteEdit() {
 			</div>
 		</div>
 	)
-}
-
-function ErrorList({
-	errors,
-	id,
-}: {
-	errors?: Array<string> | null
-	id?: string
-}) {
-	return errors?.length ? (
-		<ul className="flex flex-col gap-1" id={id}>
-			{errors.map((error, i) => (
-				<li key={i} className="text-[10px] text-foreground-destructive">
-					{error}
-				</li>
-			))}
-		</ul>
-	) : null
 }
 
 export function ErrorBoundary() {
