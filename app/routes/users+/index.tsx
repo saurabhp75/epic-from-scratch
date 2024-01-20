@@ -2,7 +2,7 @@ import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Link, useLoaderData } from '@remix-run/react'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { SearchBar } from '~/components/search-bar'
-import { db } from '~/utils/db.server'
+import { prisma } from '~/utils/db.server'
 import { cn, getUserImgSrc, useDelayedIsPending } from '~/utils/misc'
 
 export async function loader({ request }: DataFunctionArgs) {
@@ -10,23 +10,24 @@ export async function loader({ request }: DataFunctionArgs) {
 	if (searchTerm === '') {
 		return redirect('/users')
 	}
-	const users = db.user.findMany({
-		where: {
-			username: {
-				contains: searchTerm ?? '',
-			},
-		},
-	})
 
-	return json({
-		status: 'idle',
-		users: users.map(u => ({
-			id: u.id,
-			username: u.username,
-			name: u.name,
-			image: u.image ? { id: u.image.id } : undefined,
-		})),
-	} as const)
+	// query the user table with prisma.$queryRaw
+	// Here are the requirements:
+	// 1. create a variable called `like` that is a string of the searchTerm surrounded by `%` characters
+	// 2. select the id, username, and name of the user (we'll bring in the image later)
+	// 3. filter where the username is LIKE the `like` variable or the name is LIKE the `like` variable
+	// 4. limit the results to 50
+
+	const like = `%${searchTerm ?? ''}%`
+
+	const users = await prisma.$queryRaw`
+		SELECT id, username, name
+		FROM User
+		WHERE username LIKE ${like}
+		OR name LIKE ${like}
+		LIMIT 50
+	`
+	return json({ status: 'idle', users } as const)
 }
 
 export default function UsersRoute() {
@@ -44,6 +45,7 @@ export default function UsersRoute() {
 			</div>
 			<main>
 				{data.status === 'idle' ? (
+					// @ts-expect-error 🦺 we'll fix this next
 					data.users.length ? (
 						<ul
 							className={cn(
@@ -51,6 +53,7 @@ export default function UsersRoute() {
 								{ 'opacity-50': isPending },
 							)}
 						>
+							{/* @ts-expect-error 🦺 we'll fix this next */}
 							{data.users.map(user => (
 								<li key={user.id}>
 									<Link
