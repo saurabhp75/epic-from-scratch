@@ -11,27 +11,25 @@ import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { floatingToolbarClassName } from '~/components/floating-toolbar'
 import { Button } from '~/components/ui/button'
 import { validateCSRF } from '~/utils/csrf.server'
-import { db } from '~/utils/db.server'
-import { invariantResponse } from '~/utils/misc'
+import { prisma } from '~/utils/db.server'
+import { getNoteImgSrc, invariantResponse } from '~/utils/misc'
 import { type loader as notesLoader } from './notes'
 
 export async function loader({ params }: LoaderFunctionArgs) {
-	const { noteId } = params
-	const note = db.note.findFirst({
-		where: {
-			id: { equals: noteId },
+	const note = await prisma.note.findFirst({
+		select: {
+			title: true,
+			content: true,
+			images: {
+				select: { id: true, altText: true },
+			},
 		},
+		where: { id: params.noteId },
 	})
 
-	invariantResponse(note, 'note not found', { status: 404 })
+	invariantResponse(note, 'Note not found', { status: 404 })
 
-	return json({
-		note: {
-			title: note.title,
-			content: note.content,
-			images: note.images.map(i => ({ id: i.id, altText: i.altText })),
-		},
-	})
+	return json({ note })
 }
 
 export async function action({ params, request }: ActionFunctionArgs) {
@@ -42,11 +40,11 @@ export async function action({ params, request }: ActionFunctionArgs) {
 
 	await validateCSRF(formData, request.headers)
 
-	db.note.delete({ where: { id: { equals: params.noteId } } })
+	await prisma.note.delete({ where: { id: params.noteId } })
 	return redirect(`/users/${params.username}/notes`)
 }
 
-export default function SomeNoteId() {
+export default function NoteRoute() {
 	const data = useLoaderData<typeof loader>()
 
 	return (
@@ -56,10 +54,9 @@ export default function SomeNoteId() {
 				<ul className="flex flex-wrap gap-5 py-5">
 					{data.note.images.map(image => (
 						<li key={image.id}>
-							{/* eslint-disable-next-line remix-react-routes/use-link-for-routes */}
-							<a href={`/resources/images/${image.id}`}>
+							<a href={getNoteImgSrc(image.id)}>
 								<img
-									src={`/resources/images/${image.id}`}
+									src={getNoteImgSrc(image.id)}
 									alt={image.altText ?? ''}
 									className="h-32 w-32 rounded-lg object-cover"
 								/>
