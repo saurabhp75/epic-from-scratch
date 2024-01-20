@@ -23,6 +23,7 @@ export const db = singleton('db', () => {
 			createdAt: () => new Date(),
 
 			notes: manyOf('note'),
+			image: oneOf('image'),
 		},
 		note: {
 			id: primaryKey(getId),
