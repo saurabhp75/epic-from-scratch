@@ -74,6 +74,8 @@ model Note {
 
   // non-unique foreign key
   @@index([ownerId])
+  // This helps our order by in the user search page a LOT
+  @@index([ownerId, updatedAt])
 }
 
 model NoteImage {
