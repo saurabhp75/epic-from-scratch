@@ -37,7 +37,7 @@ import { csrf } from './utils/csrf.server'
 import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
 import { invariantResponse } from './utils/misc'
-import { type Theme } from './utils/theme.server'
+import { getTheme, setTheme, type Theme } from './utils/theme.server'
 
 export const links: LinksFunction = () => {
 	return [
@@ -69,7 +69,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	const honeyProps = honeypot.getInputProps()
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 	return json(
-		{ username: os.userInfo().username, ENV: getEnv(), honeyProps, csrfToken },
+		{
+			username: os.userInfo().username,
+			theme: getTheme(request),
+			ENV: getEnv(),
+			honeyProps,
+			csrfToken,
+		},
 		{
 			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
 		},
@@ -97,16 +103,23 @@ export async function action({ request }: LoaderFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// Uncomment the console.log to test things out:
-	console.log(submission.value)
+	const { theme } = submission.value
+
+	const responseInit = {
+		headers: {
+			// add a 'set-cookie' header to this response and set it to the
+			// serialized cookie:
+			'set-cookie': setTheme(theme),
+		},
+	}
 
 	// we'll do stuff with the submission next...
-	return json({ success: true, submission })
+	return json({ success: true, submission }, responseInit)
 }
 
 function App() {
 	const data = useLoaderData<typeof loader>()
-	const theme = 'light' // we'll handle this later
+	const theme = data.theme
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
