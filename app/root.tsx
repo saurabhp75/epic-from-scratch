@@ -171,7 +171,7 @@ function Document({
 	env?: Record<string, string>
 }) {
 	return (
-		<html lang="en" className="h-full overflow-x-hidden">
+		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
 			<head>
 				<Meta />
 				<meta charSet="utf-8" />
