@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@radix-ui/react-tooltip'
 import * as React from 'react'
-import useSpinDelay from 'spin-delay'
+import { useSpinDelay } from 'spin-delay'
 import { cn } from '~/utils/misc'
 import { Button, type ButtonProps } from './button'
 import { Icon } from './icon'
