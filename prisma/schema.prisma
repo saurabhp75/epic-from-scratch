@@ -9,21 +9,20 @@
 // Widen then narrow approach:
 // Widen app to consume A or B
 // Widen db to provide A and B and the app to write to both A and B
-// Narrow app to consume B and only write to B
-// Narrow db to provide B
+// Narrow app to consume B and only write to B. Narrow db to provide B
 // https://www.notion.so/03-Data-Migrations-Data-Modeling-Deep-Dive-a7b8f261357840cb8c9177e2b1397961
 
 // index takes more space and it takes more time to add records
-// but they make mutations faster sometimes
-// Most of the times, the read speed is more important than write speed
+// but they make mutations faster sometimes. Most of the times, the read speed is more important than write speed
 // Things to consider indexing
 // 1. Primary keys: Done by default
 // 2. Unique keys: handled by Prisma
-// 3. Non unique foreign keys: Opportunity for indexing
+// 3. Non unique foreign keys: Opportunity for indexing (should be done by default manually as per KCD)
 // Things to consider for indexing
 // "WHERE" clause stuff
 // "ORDERBY" clause stuff
 // Identify indexing opportinities
+// sqlite3 ./prisma/data.db
 // Use sql query: EXPLAIN QUERY PLAN SELECT * FROM user WHERE name = 'Alice';
 // Look for scan and search without an index
 // Creating index manually using sql
@@ -32,6 +31,8 @@
 // @@index[fieldname1, fieldname2 ...]  // normally at the most 2 keys are used for indexing
 // "npx prisms db reset" : clear the db, run all the migrations and then run seed script.
 // Use npx tsx ./prisma/seed.ts to seed the db
+// To view all indexes on a db use following command:
+// SELECT name from sqlite_master where type="index"; 
 
 generator client {
   provider = "prisma-client-js"
@@ -70,6 +71,9 @@ model Note {
   owner     User        @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId   String // Absense of "@unique" makes the relationship one to many 
   images    NoteImage[]
+
+  // non-unique foreign key
+  @@index([ownerId])
 }
 
 model NoteImage {
@@ -81,6 +85,9 @@ model NoteImage {
   updatedAt   DateTime @updatedAt
   note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   noteId      String // Absense of "@unique" makes the relationship one to many 
+
+  // non-unique foreign key
+  @@index([noteId])
 }
 
 model UserImage {
