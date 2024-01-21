@@ -17,6 +17,7 @@ import {
 	Scripts,
 	ScrollRestoration,
 	useFetcher,
+	useFetchers,
 	useLoaderData,
 	useMatches,
 } from '@remix-run/react'
@@ -119,7 +120,7 @@ export async function action({ request }: LoaderFunctionArgs) {
 
 function App() {
 	const data = useLoaderData<typeof loader>()
-	const theme = data.theme
+	const theme = useTheme()
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
@@ -161,6 +162,27 @@ function App() {
 			<Spacer size="3xs" />
 		</Document>
 	)
+}
+
+// useTheme hook reads the current theme from useLoaderData
+// and returns it unless there's an ongoing fetcher setting the theme.
+// The ThemeSwitch is using useFetcher to make the switch.
+function useTheme() {
+	const data = useLoaderData<typeof loader>()
+	// Add a `.find` on the fetchers array to find the fetcher which has formData
+	// with an intent of 'update-theme'. If that fetcher is found, then return the
+	// 'theme' from the fetcher's formData.
+	const fetchers = useFetchers()
+	const themeFetcher = fetchers.find(
+		fetcher => fetcher.formData?.get('intent') === 'update-theme',
+	)
+	// Get the value submitted by the user
+	const optimisticTheme = themeFetcher?.formData?.get('theme')
+	if (optimisticTheme === 'light' || optimisticTheme === 'dark') {
+		return optimisticTheme
+	}
+	// Fallback to server provided value
+	return data.theme
 }
 
 export default function AppWithProviders() {
