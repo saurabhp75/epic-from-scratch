@@ -5,7 +5,7 @@
  */
 
 import { RemixBrowser } from '@remix-run/react'
-import { startTransition, StrictMode } from 'react'
+import { startTransition } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
 // If statement here checks if the ENV.MODE is development
@@ -15,10 +15,5 @@ if (ENV.MODE === 'development') {
 }
 
 startTransition(() => {
-	hydrateRoot(
-		document,
-		<StrictMode>
-			<RemixBrowser />
-		</StrictMode>,
-	)
+	hydrateRoot(document, <RemixBrowser />)
 })
