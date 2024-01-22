@@ -41,6 +41,7 @@ import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
 import { invariantResponse } from './utils/misc'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
+import { toastSessionStorage } from './utils/toast.server'
 
 export const links: LinksFunction = () => {
 	return [
@@ -71,11 +72,17 @@ export const meta: MetaFunction = () => {
 export async function loader({ request }: LoaderFunctionArgs) {
 	const honeyProps = honeypot.getInputProps()
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
+
+	const toastCookieSession = await toastSessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const toast = toastCookieSession.get('toast')
+
 	return json(
 		{
 			username: os.userInfo().username,
 			theme: getTheme(request),
-			toast: null,
+			toast,
 			ENV: getEnv(),
 			honeyProps,
 			csrfToken,

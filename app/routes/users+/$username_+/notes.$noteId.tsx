@@ -20,6 +20,7 @@ import { StatusButton } from '~/components/ui/status-button'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getNoteImgSrc, invariantResponse, useIsPending } from '~/utils/misc'
+import { toastSessionStorage } from '~/utils/toast.server'
 import { type loader as notesLoader } from './notes'
 
 export async function loader({ params }: LoaderFunctionArgs) {
@@ -79,18 +80,20 @@ export async function action({ params, request }: ActionFunctionArgs) {
 
 	await prisma.note.delete({ where: { id: note.id } })
 
-	// get the cookie header from the request
-	// get the toastCookieSession using the toastSessionStorage.getSession
-	// set a 'toast' value on the session with the following toast object:
-	// {
-	// 	type: 'success',
-	// 	title: 'Note deleted',
-	// 	description: 'Your note has been deleted',
-	// }
+	const toastCookieSession = await toastSessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+
+	toastCookieSession.flash('toast', {
+		type: 'success',
+		title: 'Note deleted',
+		description: 'Your note has been deleted',
+	})
 
 	return redirect(`/users/${note.owner.username}/notes`, {
-		// add a headers object here with a 'set-cookie' property
-		// use await toastSessionStorage.commitSession to get the cookie header
+		headers: {
+			'set-cookie': await toastSessionStorage.commitSession(toastCookieSession),
+		},
 	})
 }
 
