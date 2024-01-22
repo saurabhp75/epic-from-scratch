@@ -15,8 +15,10 @@ import { ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
 import { validateCSRF } from '~/utils/csrf.server'
+import { prisma } from '~/utils/db.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
 import { useIsPending } from '~/utils/misc'
+import { sessionStorage } from '~/utils/session.server'
 import { PasswordSchema, UsernameSchema } from '~/utils/user-validation'
 
 const LoginFormSchema = z.object({
@@ -29,7 +31,27 @@ export async function action({ request }: ActionFunctionArgs) {
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)
 	const submission = await parse(formData, {
-		schema: LoginFormSchema,
+		schema: intent =>
+			LoginFormSchema.transform(async (data, ctx) => {
+				if (intent !== 'submit') return { ...data, user: null }
+				// find the user in the database by their username
+
+				const user = await prisma.user.findUnique({
+					select: { id: true },
+					where: { username: data.username },
+				})
+				// if there's no user by that username then add an issue to the context
+				// and return z.NEVER
+				// https://zod.dev/?id=validating-during-transform
+				if (!user) {
+					ctx.addIssue({
+						code: 'custom',
+						message: 'Invalid username or password',
+					})
+					return z.NEVER
+				}
+				return { ...data, user }
+			}),
 		async: true,
 	})
 	// get the password off the payload that's sent back
@@ -40,9 +62,29 @@ export async function action({ request }: ActionFunctionArgs) {
 		delete submission.value?.password
 		return json({ status: 'idle', submission } as const)
 	}
-	if (!submission.value) {
+	if (!submission.value?.user) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
+
+	// get the user from the submission.value
+	const { user } = submission.value
+
+	// request's cookie header request.headers.get('cookie')
+	// use the getSession utility to get the session value from the
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+
+	// set the 'userId' in the session to the user.id
+	cookieSession.set('userId', user.id)
+
+	// update this redirect to add a 'set-cookie' header to the result of
+	// commitSession with the session value you're working with
+	return redirect('/', {
+		headers: {
+			'set-cookie': await sessionStorage.commitSession(cookieSession),
+		},
+	})
 
 	return redirect('/')
 }
