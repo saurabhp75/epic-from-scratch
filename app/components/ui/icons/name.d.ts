@@ -19,5 +19,7 @@ export type IconName =
 	| 'github-logo'
 	| 'magnifying-glass'
 	| 'moon'
+	| 'pencil-1'
 	| 'sun'
+	| 'trash'
 	| 'update'
