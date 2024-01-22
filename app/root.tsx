@@ -39,7 +39,7 @@ import tailwindStylesheetUrl from './styles/tailwind.css'
 import { csrf } from './utils/csrf.server'
 import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
-import { invariantResponse } from './utils/misc'
+import { combineHeaders, invariantResponse } from './utils/misc'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
 import { toastSessionStorage } from './utils/toast.server'
 
@@ -78,6 +78,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	)
 	const toast = toastCookieSession.get('toast')
 
+	// unset the toast
+	toastCookieSession.unset('toast')
+
 	return json(
 		{
 			username: os.userInfo().username,
@@ -88,7 +91,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			csrfToken,
 		},
 		{
-			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
+			// "combineHeaders" combine 'set-cookie' headers for toast
+			// and csrf related cookies
+			headers: combineHeaders(
+				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : null,
+				{
+					// commit the session change. we could also
+					// use destroySession() without the need to unset the
+					// toast cookie
+					'set-cookie':
+						await toastSessionStorage.commitSession(toastCookieSession),
+				},
+			),
 		},
 	)
 }
