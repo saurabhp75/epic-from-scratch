@@ -12,8 +12,6 @@ export async function loader() {
 export async function action({ request }: ActionFunctionArgs) {
 	// get the user's session from the request that's passed to the action
 	// destroy the session and set the 'set-cookie' header
-	const formData = await request.formData()
-	await validateCSRF(formData, request.headers)
 
 	// We can use getSession() without param here is we just
 	// want to destroy the session.
