@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { safeRedirect } from 'remix-utils/safe-redirect'
 import { prisma } from './db.server'
 import { combineResponseInits } from './misc'
+import { sessionStorage } from './session.server'
 
 // We cannot simply import bcrypt in the routes
 // file as bcrypt needs crypto, which will end up
