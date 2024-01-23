@@ -56,8 +56,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  image UserImage?
-  notes Note[]
+  image    UserImage?
+  notes    Note[]
+  // password can't enforced to be required at 
+  // db level and this actually is helpful
+  Password Password?
 }
 
 model Note {
@@ -101,4 +104,14 @@ model UserImage {
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId      String   @unique // "@unique" makes the relationship one to one 
+}
+
+// add a Password model here. It should only have the hash which is a string
+// and a userId field which is a string and is unique. It should also have a
+// user field to establish the relationship.
+model Password {
+  hash String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String @unique
 }
