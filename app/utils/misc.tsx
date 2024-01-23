@@ -1,6 +1,6 @@
 import { useFormAction, useNavigation } from '@remix-run/react'
 import { type ClassValue, clsx } from 'clsx'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSpinDelay } from 'spin-delay'
 import { twMerge } from 'tailwind-merge'
 import userFallback from '~/assets/user.png'
@@ -36,6 +36,18 @@ export function getErrorMessage(error: unknown) {
  */
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs))
+}
+
+export function getDomainUrl(request: Request) {
+	const host =
+		request.headers.get('X-Forwarded-Host') ??
+		request.headers.get('host') ??
+		new URL(request.url).host
+	if (!host) {
+		throw new Error('Could not determine domain URL.')
+	}
+	const protocol = host.includes('localhost') ? 'http' : 'https'
+	return `${protocol}://${host}`
 }
 
 /**
@@ -94,6 +106,53 @@ export function useIsSubmitting({
 		navigation.formAction === (formAction ?? contextualFormAction) &&
 		navigation.formMethod === formMethod
 	)
+}
+
+function callAll<Args extends Array<unknown>>(
+	...fns: Array<((...args: Args) => unknown) | undefined>
+) {
+	return (...args: Args) => fns.forEach(fn => fn?.(...args))
+}
+
+/**
+ * Use this hook with a button and it will make it so the first click sets a
+ * `doubleCheck` state to true, and the second click will actually trigger the
+ * `onClick` handler. This allows you to have a button that can be like a
+ * "are you sure?" experience for the user before doing destructive operations.
+ */
+export function useDoubleCheck() {
+	const [doubleCheck, setDoubleCheck] = useState(false)
+
+	function getButtonProps(
+		props?: React.ButtonHTMLAttributes<HTMLButtonElement>,
+	) {
+		const onBlur: React.ButtonHTMLAttributes<HTMLButtonElement>['onBlur'] =
+			() => setDoubleCheck(false)
+
+		const onClick: React.ButtonHTMLAttributes<HTMLButtonElement>['onClick'] =
+			doubleCheck
+				? undefined
+				: e => {
+						e.preventDefault()
+						setDoubleCheck(true)
+					}
+
+		const onKeyUp: React.ButtonHTMLAttributes<HTMLButtonElement>['onKeyUp'] =
+			e => {
+				if (e.key === 'Escape') {
+					setDoubleCheck(false)
+				}
+			}
+
+		return {
+			...props,
+			onBlur: callAll(onBlur, props?.onBlur),
+			onClick: callAll(onClick, props?.onClick),
+			onKeyUp: callAll(onKeyUp, props?.onKeyUp),
+		}
+	}
+
+	return { doubleCheck, getButtonProps }
 }
 
 /**
@@ -188,6 +247,22 @@ export function combineHeaders(
 		if (!header) continue
 		for (const [key, value] of new Headers(header).entries()) {
 			combined.append(key, value)
+		}
+	}
+	return combined
+}
+
+/**
+ * Combine multiple response init objects into one (uses combineHeaders)
+ */
+export function combineResponseInits(
+	...responseInits: Array<ResponseInit | undefined>
+) {
+	let combined: ResponseInit = {}
+	for (const responseInit of responseInits) {
+		combined = {
+			...responseInit,
+			headers: combineHeaders(combined.headers, responseInit?.headers),
 		}
 	}
 	return combined

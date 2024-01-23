@@ -13,7 +13,11 @@ import { z } from 'zod'
 import { CheckboxField, ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
-import { bcrypt, getSessionExpirationDate } from '~/utils/auth.server'
+import {
+	getSessionExpirationDate,
+	signup,
+	userIdKey,
+} from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
@@ -69,26 +73,7 @@ export async function action({ request }: LoaderFunctionArgs) {
 			}
 		}).transform(async data => {
 			// retrieve the password user entered from data here
-			const { username, email, name, password } = data
-
-			// Failing with (possible bug!)
-			// If we try to create a user with an existing email then
-			// this create will fail.
-			// Unique constraint failed on the fields: (`email`)
-			const user = await prisma.user.create({
-				select: { id: true },
-				data: {
-					email: email.toLowerCase(),
-					username: username.toLowerCase(),
-					name,
-					// create a password here using bcrypt.hash (the async version)
-					password: {
-						create: {
-							hash: await bcrypt.hash(password, 10),
-						},
-					},
-				},
-			})
+			const user = await signup(data)
 
 			return { ...data, user }
 		}),
@@ -109,7 +94,7 @@ export async function action({ request }: LoaderFunctionArgs) {
 		request.headers.get('cookie'),
 	)
 
-	cookieSession.set('userId', user.id)
+	cookieSession.set(userIdKey, user.id)
 
 	return redirect('/', {
 		headers: {

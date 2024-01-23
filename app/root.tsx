@@ -10,7 +10,6 @@ import {
 	redirect,
 } from '@remix-run/node'
 import {
-	Form,
 	Link,
 	Links,
 	LiveReload,
@@ -21,12 +20,10 @@ import {
 	useFetcher,
 	useFetchers,
 	useLoaderData,
-	useLocation,
 	useMatches,
-	useSubmit,
 } from '@remix-run/react'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { Toaster, toast as showToast } from 'sonner'
@@ -36,16 +33,16 @@ import { GeneralErrorBoundary } from './components/error-boundary'
 import { ErrorList } from './components/forms'
 import { SearchBar } from './components/search-bar'
 import { Spacer } from './components/spacer'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogTitle,
-	AlertDialogFooter,
-	AlertDialogHeader,
-} from './components/ui/alert-dialog'
+// import {
+// 	AlertDialog,
+// 	AlertDialogAction,
+// 	AlertDialogCancel,
+// 	AlertDialogContent,
+// 	AlertDialogDescription,
+// 	AlertDialogTitle,
+// 	AlertDialogFooter,
+// 	AlertDialogHeader,
+// } from './components/ui/alert-dialog'
 import { Button } from './components/ui/button'
 import { Icon } from './components/ui/icon'
 import fontStylesheetUrl from './styles/font.css'
@@ -191,7 +188,7 @@ function App() {
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
 	return (
-		<Document isLoggedIn={Boolean(user)} theme={theme} env={data.ENV}>
+		<Document theme={theme} env={data.ENV}>
 			<header className="container px-6 py-4 sm:px-8 sm:py-6">
 				<nav className="flex items-center justify-between gap-4 sm:gap-6">
 					<Link to="/">
@@ -287,12 +284,12 @@ function Document({
 	children,
 	theme,
 	env,
-	isLoggedIn = false,
+	// isLoggedIn = false,
 }: {
 	children: React.ReactNode
 	theme?: Theme
 	env?: Record<string, string>
-	isLoggedIn?: boolean
+	// isLoggedIn?: boolean
 }) {
 	return (
 		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
@@ -313,7 +310,7 @@ function Document({
 						__html: `window.ENV = ${JSON.stringify(env)}`,
 					}}
 				/>
-				{isLoggedIn ? <LogoutTimer /> : null}
+				{/* {isLoggedIn ? <LogoutTimer /> : null} */}
 				<Toaster closeButton position="top-center" />
 				<ScrollRestoration />
 				<Scripts />
@@ -370,6 +367,7 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	)
 }
 
+/* Deactivate auto-logout
 function LogoutTimer() {
 	const [status, setStatus] = useState<'idle' | 'show-modal'>('idle')
 	// bring in the location via useLocation so we can access location.key
@@ -440,6 +438,7 @@ function LogoutTimer() {
 		</AlertDialog>
 	)
 }
+*/
 
 function ShowToast({ toast }: { toast: Toast }) {
 	const { id, type, title, description } = toast
