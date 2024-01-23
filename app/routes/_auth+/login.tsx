@@ -11,10 +11,10 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
-import { ErrorList, Field } from '~/components/forms'
+import { CheckboxField, ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
-import { bcrypt } from '~/utils/auth.server'
+import { bcrypt, getSessionExpirationDate } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
@@ -25,6 +25,7 @@ import { PasswordSchema, UsernameSchema } from '~/utils/user-validation'
 const LoginFormSchema = z.object({
 	username: UsernameSchema,
 	password: PasswordSchema,
+	remember: z.boolean().optional(),
 })
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -85,7 +86,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	// get the user from the submission.value
-	const { user } = submission.value
+	const { user, remember } = submission.value
 
 	// request's cookie header request.headers.get('cookie')
 	// use the getSession utility to get the session value from the
@@ -100,7 +101,12 @@ export async function action({ request }: ActionFunctionArgs) {
 	// commitSession with the session value you're working with
 	return redirect('/', {
 		headers: {
-			'set-cookie': await sessionStorage.commitSession(cookieSession),
+			// add an expires option to this commitSession call and set it to
+			// a date 30 days in the future if they checked the remember checkbox
+			// or undefined if they did not.
+			'set-cookie': await sessionStorage.commitSession(cookieSession, {
+				expires: remember ? getSessionExpirationDate() : undefined,
+			}),
 		},
 	})
 
@@ -156,7 +162,16 @@ export default function LoginPage() {
 							/>
 
 							<div className="flex justify-between">
-								<div />
+								<CheckboxField
+									labelProps={{
+										htmlFor: fields.remember.id,
+										children: 'Remember me',
+									}}
+									buttonProps={conform.input(fields.remember, {
+										type: 'checkbox',
+									})}
+									errors={fields.remember.errors}
+								/>
 								<div>
 									<Link
 										to="/forgot-password"

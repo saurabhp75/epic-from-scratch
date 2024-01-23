@@ -13,7 +13,7 @@ import { z } from 'zod'
 import { CheckboxField, ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
-import { bcrypt } from '~/utils/auth.server'
+import { bcrypt, getSessionExpirationDate } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
@@ -37,6 +37,7 @@ const SignupFormSchema = z
 			required_error:
 				'You must agree to the terms of service and privacy policy',
 		}),
+		remember: z.boolean().optional(),
 	})
 	.superRefine(({ confirmPassword, password }, ctx) => {
 		if (confirmPassword !== password) {
@@ -70,6 +71,10 @@ export async function action({ request }: LoaderFunctionArgs) {
 			// retrieve the password user entered from data here
 			const { username, email, name, password } = data
 
+			// Failing with (possible bug!)
+			// If we try to create a user with an existing email then
+			// this create will fail.
+			// Unique constraint failed on the fields: (`email`)
 			const user = await prisma.user.create({
 				select: { id: true },
 				data: {
@@ -98,7 +103,7 @@ export async function action({ request }: LoaderFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { user } = submission.value
+	const { user, remember } = submission.value
 
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
@@ -108,7 +113,12 @@ export async function action({ request }: LoaderFunctionArgs) {
 
 	return redirect('/', {
 		headers: {
-			'set-cookie': await sessionStorage.commitSession(cookieSession),
+			// add an expires option to this commitSession call and set it to
+			// a date 30 days in the future if they checked the remember checkbox
+			// or undefined if they did not.
+			'set-cookie': await sessionStorage.commitSession(cookieSession, {
+				expires: remember ? getSessionExpirationDate() : undefined,
+			}),
 		},
 	})
 }
@@ -207,6 +217,15 @@ export default function SignupRoute() {
 							{ type: 'checkbox' },
 						)}
 						errors={fields.agreeToTermsOfServiceAndPrivacyPolicy.errors}
+					/>
+
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.remember.id,
+							children: 'Remember me',
+						}}
+						buttonProps={conform.input(fields.remember, { type: 'checkbox' })}
+						errors={fields.remember.errors}
 					/>
 
 					<ErrorList errors={form.errors} id={form.errorId} />
