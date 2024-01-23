@@ -7,6 +7,7 @@ import {
 	json,
 	type MetaFunction,
 	type LoaderFunctionArgs,
+	redirect,
 } from '@remix-run/node'
 import {
 	Link,
@@ -100,6 +101,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
 				where: { id: userId },
 			})
 		: null
+
+	// if there's a userId but no user then something's wrong.
+	// Let's delete destroy the session and redirect to the home page.
+	if (userId && !user) {
+		// something weird happened... The user is authenticated but we can't find
+		// them in the database. Maybe they were deleted? Let's log them out.
+		throw redirect('/', {
+			headers: {
+				'set-cookie': await sessionStorage.destroySession(cookieSession),
+			},
+		})
+	}
 
 	return json(
 		{
