@@ -44,6 +44,7 @@ import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
 import { sessionStorage } from './utils/session.server'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
 import { type Toast, getToast } from './utils/toast.server'
+import { useOptionalUser } from './utils/user'
 
 export const links: LinksFunction = () => {
 	return [
@@ -159,7 +160,7 @@ export async function action({ request }: LoaderFunctionArgs) {
 function App() {
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
-	const user = data.user
+	const user = useOptionalUser()
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 

@@ -21,6 +21,7 @@ import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getNoteImgSrc, invariantResponse, useIsPending } from '~/utils/misc'
 import { toastSessionStorage } from '~/utils/toast.server'
+import { useOptionalUser } from '~/utils/user'
 import { type loader as notesLoader } from './notes'
 
 export async function loader({ params }: LoaderFunctionArgs) {
@@ -99,6 +100,8 @@ export async function action({ params, request }: ActionFunctionArgs) {
 
 export default function NoteRoute() {
 	const data = useLoaderData<typeof loader>()
+	const user = useOptionalUser()
+	const isOwner = user?.id === data.note.ownerId
 
 	return (
 		<div className="absolute inset-0 flex flex-col px-10">
@@ -121,26 +124,28 @@ export default function NoteRoute() {
 					{data.note.content}
 				</p>
 			</div>
-			<div className={floatingToolbarClassName}>
-				<span className="text-sm text-foreground/90 max-[524px]:hidden">
-					<Icon name="clock" className="scale-125">
-						{data.timeAgo} ago
-					</Icon>
-				</span>
-				<div className="grid flex-1 grid-cols-2 justify-end gap-2 min-[525px]:flex md:gap-4">
-					<DeleteNote id={data.note.id} />
-					<Button
-						asChild
-						className="min-[525px]:max-md:aspect-square min-[525px]:max-md:px-0"
-					>
-						<Link to="edit">
-							<Icon name="pencil-1" className="scale-125 max-md:scale-150">
-								<span className="max-md:hidden">Edit</span>
-							</Icon>
-						</Link>
-					</Button>
+			{isOwner ? (
+				<div className={floatingToolbarClassName}>
+					<span className="text-sm text-foreground/90 max-[524px]:hidden">
+						<Icon name="clock" className="scale-125">
+							{data.timeAgo} ago
+						</Icon>
+					</span>
+					<div className="grid flex-1 grid-cols-2 justify-end gap-2 min-[525px]:flex md:gap-4">
+						<DeleteNote id={data.note.id} />
+						<Button
+							asChild
+							className="min-[525px]:max-md:aspect-square min-[525px]:max-md:px-0"
+						>
+							<Link to="edit">
+								<Icon name="pencil-1" className="scale-125 max-md:scale-150">
+									<span className="max-md:hidden">Edit</span>
+								</Icon>
+							</Link>
+						</Button>
+					</div>
 				</div>
-			</div>
+			) : null}
 		</div>
 	)
 }

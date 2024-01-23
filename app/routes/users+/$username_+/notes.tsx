@@ -4,11 +4,13 @@ import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { Icon } from '~/components/ui/icon'
 import { prisma } from '~/utils/db.server'
 import { cn, getUserImgSrc, invariantResponse } from '~/utils/misc'
+import { useOptionalUser } from '~/utils/user'
 
 export async function loader({ params }: LoaderFunctionArgs) {
 	// Nest related queries (notes and images)
 	const owner = await prisma.user.findFirst({
 		select: {
+			id: true,
 			name: true,
 			username: true,
 			image: { select: { id: true } },
@@ -23,6 +25,8 @@ export async function loader({ params }: LoaderFunctionArgs) {
 }
 export default function NotesRoute() {
 	const data = useLoaderData<typeof loader>()
+	const user = useOptionalUser()
+	const isOwner = user?.id === data.owner.id
 	const ownerDisplayName = data.owner?.name ?? data.owner?.username
 
 	const navLinkDefaultClassName =
@@ -47,16 +51,18 @@ export default function NotesRoute() {
 							</h1>
 						</Link>
 						<ul className="overflow-y-auto overflow-x-hidden pb-12">
-							<li className="p-1 pr-0">
-								<NavLink
-									to="new"
-									className={({ isActive }) =>
-										cn(navLinkDefaultClassName, isActive && 'bg-accent')
-									}
-								>
-									<Icon name="plus">New Note</Icon>
-								</NavLink>
-							</li>
+							{isOwner ? (
+								<li className="p-1 pr-0">
+									<NavLink
+										to="new"
+										className={({ isActive }) =>
+											cn(navLinkDefaultClassName, isActive && 'bg-accent')
+										}
+									>
+										<Icon name="plus">New Note</Icon>
+									</NavLink>
+								</li>
+							) : null}
 							{data.owner.notes.map(note => (
 								<li key={note.id} className="p-1 pr-0">
 									<NavLink
