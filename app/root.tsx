@@ -43,7 +43,7 @@ import { honeypot } from './utils/honeypot.server'
 import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
 import { sessionStorage } from './utils/session.server'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
-import { toastSessionStorage } from './utils/toast.server'
+import { type Toast, getToast } from './utils/toast.server'
 
 export const links: LinksFunction = () => {
 	return [
@@ -75,10 +75,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	const honeyProps = honeypot.getInputProps()
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 
-	const toastCookieSession = await toastSessionStorage.getSession(
-		request.headers.get('cookie'),
-	)
-	const toast = toastCookieSession.get('toast')
+	const { toast, headers: toastHeaders } = await getToast(request)
 
 	// get the cookie header from the request
 	const cookieSession = await sessionStorage.getSession(
@@ -118,13 +115,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			// and csrf related cookies
 			headers: combineHeaders(
 				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : null,
-				{
-					// commit the session change. we could also
-					// use destroySession() without the need to unset the
-					// toast cookie
-					'set-cookie':
-						await toastSessionStorage.commitSession(toastCookieSession),
-				},
+				toastHeaders,
 			),
 		},
 	)
@@ -243,7 +234,7 @@ function useTheme() {
 	// 'theme' from the fetcher's formData.
 	const fetchers = useFetchers()
 	const themeFetcher = fetchers.find(
-		fetcher => fetcher.formData?.get('intent') === 'update-theme',
+		f => f.formData?.get('intent') === 'update-theme',
 	)
 	// Get the value submitted by the user
 	const optimisticTheme = themeFetcher?.formData?.get('theme')
@@ -349,13 +340,9 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	)
 }
 
-function ShowToast({ toast }: { toast: any }) {
-	const { id, type, title, description } = toast as {
-		id: string
-		type: 'success' | 'message'
-		title: string
-		description: string
-	}
+function ShowToast({ toast }: { toast: Toast }) {
+	const { id, type, title, description } = toast
+
 	useEffect(() => {
 		setTimeout(() => {
 			showToast[type](title, { id, description })

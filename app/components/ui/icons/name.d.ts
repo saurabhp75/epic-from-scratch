@@ -20,6 +20,7 @@ export type IconName =
 	| 'magnifying-glass'
 	| 'moon'
 	| 'pencil-1'
+	| 'plus'
 	| 'sun'
 	| 'trash'
 	| 'update'
