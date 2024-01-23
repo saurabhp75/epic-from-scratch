@@ -4,6 +4,7 @@ import {
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { Spacer } from '~/components/spacer'
 import { Button } from '~/components/ui/button'
@@ -80,7 +81,8 @@ export default function ProfileRoute() {
 						Joined {data.userJoinedDisplay}
 					</p>
 					{isLoggedInUser ? (
-						<Form className="mt-3">
+						<Form action="/logout" method="POST" className="mt-3">
+							<AuthenticityTokenInput />
 							<Button type="submit" variant="link" size="pill">
 								<Icon name="exit" className="scale-125 max-md:scale-150">
 									Logout
