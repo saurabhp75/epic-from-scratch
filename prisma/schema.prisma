@@ -60,7 +60,7 @@ model User {
   notes    Note[]
   // password can't enforced to be required at 
   // db level and this actually is helpful
-  Password Password?
+  password Password?
 }
 
 model Note {
