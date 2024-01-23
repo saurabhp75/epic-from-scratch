@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
 import { promiseHash } from 'remix-utils/promise'
-import { createUser } from 'tests/db-utils'
+import { createPassword, createUser } from 'tests/db-utils'
 
 const prisma = new PrismaClient()
 
@@ -74,25 +74,25 @@ async function seed() {
 		}),
 	])
 
-
 	const userImages = await Promise.all(
 		Array.from({ length: 10 }, (_, index) =>
 			img({ filepath: `./tests/fixtures/images/user/${index}.jpg` }),
 		),
 	)
 
-
-
-
-
 	for (let index = 0; index < totalUsers; index++) {
+		const userData = createUser()
 		await prisma.user
 			.create({
 				// add a select to just get the ID so we're not pulling back the
 				// entire user object.
 				select: { id: true },
 				data: {
-					...createUser(),
+					...userData,
+					// add a password here
+					// to make it easy to login as users, set the password to
+					// the username. This isn't secure, but this is test data
+					password: { create: createPassword(userData.username) },
 					image: { create: userImages[index % 10] },
 					notes: {
 						create: Array.from({
@@ -163,6 +163,7 @@ async function seed() {
 			name: 'Kody',
 			// add Kody's profile image here (kodyImages.kodyUser)
 			image: { create: kodyImages.kodyUser },
+			password: { create: createPassword('kodylovesyou') },
 			notes: {
 				create: [
 					{
