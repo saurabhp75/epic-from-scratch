@@ -37,9 +37,11 @@ import { Icon } from './components/ui/icon'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
 import { csrf } from './utils/csrf.server'
+import { prisma } from './utils/db.server'
 import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
-import { combineHeaders, invariantResponse } from './utils/misc'
+import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
+import { sessionStorage } from './utils/session.server'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
 import { toastSessionStorage } from './utils/toast.server'
 
@@ -78,9 +80,33 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	)
 	const toast = toastCookieSession.get('toast')
 
+	// get the cookie header from the request
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+
+	// get the userId from the cookie session
+	const userId = cookieSession.get('userId')
+
+	// if there's a userId, then get the user from the database
+	// you will want to specify a select. You'll need the id, username, name,
+	// and image's id
+	const user = userId
+		? await prisma.user.findUnique({
+				select: {
+					id: true,
+					name: true,
+					username: true,
+					image: { select: { id: true } },
+				},
+				where: { id: userId },
+			})
+		: null
+
 	return json(
 		{
 			username: os.userInfo().username,
+			user,
 			theme: getTheme(request),
 			toast,
 			ENV: getEnv(),
@@ -142,6 +168,7 @@ export async function action({ request }: LoaderFunctionArgs) {
 function App() {
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
+	const user = data.user
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
@@ -159,9 +186,29 @@ function App() {
 						</div>
 					)}
 					<div className="flex items-center gap-10">
-						<Button asChild variant="default" size="sm">
-							<Link to="/login">Log In</Link>
-						</Button>
+						{user ? (
+							<div className="flex items-center gap-2">
+								<Button asChild variant="secondary">
+									<Link
+										to={`/users/${user.username}`}
+										className="flex items-center gap-2"
+									>
+										<img
+											className="h-8 w-8 rounded-full object-cover"
+											alt={user.name ?? user.username}
+											src={getUserImgSrc(user.image?.id)}
+										/>
+										<span className="hidden text-body-sm font-bold sm:block">
+											{user.name ?? user.username}
+										</span>
+									</Link>
+								</Button>
+							</div>
+						) : (
+							<Button asChild variant="default" size="sm">
+								<Link to="/login">Log In</Link>
+							</Button>
+						)}
 					</div>
 				</nav>
 			</header>
