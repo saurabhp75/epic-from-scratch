@@ -61,6 +61,7 @@ model User {
   // password can't enforced to be required at 
   // db level and this actually is helpful
   password Password?
+  roles    Role[]
 }
 
 model Note {
@@ -114,4 +115,58 @@ model Password {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String @unique
+}
+
+model Permission {
+  // id (as usual)
+  id String @id @default(cuid())
+
+  // action - a required string (will be one of create, read, update, delete)
+  action String // e.g. create, read, update, delete
+
+  // entity - a required string (will be one of user or note)
+  entity String // e.g. note, user, etc.
+
+  // access - a required string (will be one of own or any)
+  access String // e.g. own or any
+
+  // description - a required string (can default to "")
+  description String @default("")
+
+  // createdAt (as usual)
+  createdAt DateTime @default(now())
+
+  // updatedAt (as usual)
+  updatedAt DateTime @updatedAt
+
+  // roles - an array of Roles
+  roles Role[]
+
+  // @@unique constraint of action, entity, and access
+  // 📜 https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#unique-1
+  @@unique([action, entity, access])
+}
+
+model Role {
+  // id (as usual)
+  id String @id @default(cuid())
+
+  // name - a required string
+  name String @unique
+
+  // description - a required string (can default to "")
+  description String @default("")
+
+  // createdAt (as usual)
+  createdAt DateTime @default(now())
+
+  // updatedAt (as usual)
+  updatedAt DateTime @updatedAt
+
+  // Many to many relation doesn't have foreign key
+  // users - an array of Users
+  users User[]
+
+  // permissions - an array of Permissions
+  permissions Permission[]
 }
