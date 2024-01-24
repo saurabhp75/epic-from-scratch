@@ -1,9 +1,10 @@
 import { json, type LoaderFunctionArgs } from '@remix-run/node'
+import { requireUserId } from '~/utils/auth.server'
 import { prisma } from '~/utils/db.server'
 import { getDomainUrl } from '~/utils/misc'
 
 export async function loader({ request }: LoaderFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const user = await prisma.user.findUniqueOrThrow({
 		where: { id: userId },
 		// this is one of the *few* instances where you can use "include" because

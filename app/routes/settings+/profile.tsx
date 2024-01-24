@@ -3,6 +3,7 @@ import { Link, Outlet, useMatches } from '@remix-run/react'
 import { z } from 'zod'
 import { Spacer } from '~/components/spacer'
 import { Icon } from '~/components/ui/icon'
+import { requireUserId } from '~/utils/auth.server'
 import { prisma } from '~/utils/db.server'
 import { cn, invariantResponse } from '~/utils/misc'
 import { useUser } from '~/utils/user'
@@ -12,7 +13,7 @@ export const handle = {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { username: true },

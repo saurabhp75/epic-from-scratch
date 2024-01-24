@@ -13,6 +13,7 @@ import { ErrorList, Field } from '~/components/forms'
 import { Button } from '~/components/ui/button'
 import { Icon } from '~/components/ui/icon'
 import { StatusButton } from '~/components/ui/status-button'
+import { requireUserId } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getUserImgSrc, invariantResponse, useDoubleCheck } from '~/utils/misc'
@@ -29,7 +30,7 @@ const ProfileFormSchema = z.object({
 })
 
 export async function loader({ request }: LoaderFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {

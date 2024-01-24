@@ -133,3 +133,13 @@ export async function requireAnonymous(request: Request) {
 		throw redirect('/')
 	}
 }
+
+// returns the userId if it exists and throws a redirect
+// to the login page if no userId exists in the session.
+export async function requireUserId(request: Request) {
+	const userId = await getUserId(request)
+	if (!userId) {
+		throw redirect('/login')
+	}
+	return userId
+}
