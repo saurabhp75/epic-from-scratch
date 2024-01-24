@@ -5,6 +5,7 @@ import {
 	redirect,
 	type MetaFunction,
 	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
@@ -15,6 +16,7 @@ import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
 import {
 	getSessionExpirationDate,
+	requireAnonymous,
 	signup,
 	userIdKey,
 } from '~/utils/auth.server'
@@ -53,7 +55,13 @@ const SignupFormSchema = z
 		}
 	})
 
-export async function action({ request }: LoaderFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
+	await requireAnonymous(request)
+	return json({})
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+	await requireAnonymous(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)

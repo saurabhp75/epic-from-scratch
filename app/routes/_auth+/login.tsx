@@ -5,6 +5,7 @@ import {
 	redirect,
 	type MetaFunction,
 	type ActionFunctionArgs,
+	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, Link, useActionData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
@@ -14,7 +15,12 @@ import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { CheckboxField, ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
-import { getSessionExpirationDate, login, userIdKey } from '~/utils/auth.server'
+import {
+	getSessionExpirationDate,
+	login,
+	requireAnonymous,
+	userIdKey,
+} from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
 import { useIsPending } from '~/utils/misc'
@@ -27,7 +33,13 @@ const LoginFormSchema = z.object({
 	remember: z.boolean().optional(),
 })
 
+export async function loader({ request }: LoaderFunctionArgs) {
+	await requireAnonymous(request)
+	return json({})
+}
+
 export async function action({ request }: ActionFunctionArgs) {
+	await requireAnonymous(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)

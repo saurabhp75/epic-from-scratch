@@ -124,3 +124,12 @@ export async function verifyUserPassword(
 
 	return { id: userWithPassword.id }
 }
+
+// get the user's Id from the session if there's a userId,
+// then throw a redirect to '/'(otherwise do nothing)
+export async function requireAnonymous(request: Request) {
+	const userId = await getUserId(request)
+	if (userId) {
+		throw redirect('/')
+	}
+}
