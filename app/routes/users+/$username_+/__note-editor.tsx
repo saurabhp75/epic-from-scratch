@@ -14,8 +14,8 @@ import {
 	json,
 	unstable_parseMultipartFormData as parseMultipartFormData,
 	redirect,
-	type DataFunctionArgs,
 	type SerializeFrom,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, useFetcher } from '@remix-run/react'
 import { useRef, useState } from 'react'
@@ -29,9 +29,10 @@ import { Icon } from '~/components/ui/icon'
 import { Label } from '~/components/ui/label'
 import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
+import { requireUser } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
-import { cn, getNoteImgSrc } from '~/utils/misc'
+import { cn, getNoteImgSrc, invariantResponse } from '~/utils/misc'
 
 const titleMinLength = 1
 const titleMaxLength = 100
@@ -72,7 +73,14 @@ const NoteEditorSchema = z.object({
 	images: z.array(ImageFieldsetSchema).max(5).optional(),
 })
 
-export async function action({ request, params }: DataFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
+	// require the user and check that the user.username is equal to params.username.
+	// If not, then throw a 403 response
+	// you can use invariantResponse for this.
+	const user = await requireUser(request)
+	invariantResponse(user.username === params.username, 'Not authorized', {
+		status: 403,
+	})
 	const formData = await parseMultipartFormData(
 		request,
 		createMemoryUploadHandler({ maxPartSize: MAX_UPLOAD_SIZE }),
@@ -134,7 +142,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 		select: { id: true, owner: { select: { username: true } } },
 		where: { id: noteId ?? '__new_note__' },
 		create: {
-			owner: { connect: { username: params.username } },
+			ownerId: user.id,
 			title,
 			content,
 			images: { create: newImages },

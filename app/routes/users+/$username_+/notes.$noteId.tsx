@@ -17,6 +17,7 @@ import { ErrorList } from '~/components/forms'
 import { Button } from '~/components/ui/button'
 import { Icon } from '~/components/ui/icon'
 import { StatusButton } from '~/components/ui/status-button'
+import { requireUser } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getNoteImgSrc, invariantResponse, useIsPending } from '~/utils/misc'
@@ -59,6 +60,11 @@ const DeleteFormSchema = z.object({
 })
 
 export async function action({ params, request }: ActionFunctionArgs) {
+	const user = await requireUser(request)
+	invariantResponse(user.username === params.username, 'Not authorized', {
+		status: 403,
+	})
+
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	const submission = parse(formData, {
@@ -75,7 +81,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
 
 	const note = await prisma.note.findFirst({
 		select: { id: true, owner: { select: { username: true } } },
-		where: { id: noteId, owner: { username: params.username } },
+		where: { id: noteId, ownerId: user.id },
 	})
 	invariantResponse(note, 'Not found', { status: 404 })
 

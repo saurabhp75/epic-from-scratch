@@ -27,6 +27,7 @@ import { ErrorList, Field, TextareaField } from '~/components/forms'
 import { Button } from '~/components/ui/button'
 import { StatusButton } from '~/components/ui/status-button'
 import { Textarea } from '~/components/ui/textarea'
+import { requireUser } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import {
@@ -168,7 +169,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
+	const user = await requireUser(request)
+	invariantResponse(user.username === params.username, 'Not authorized', {
+		status: 403,
+	})
 	const note = await prisma.note.findFirst({
 		where: { id: params.noteId },
 		select: {
