@@ -109,6 +109,9 @@ export default function NoteRoute() {
 	const user = useOptionalUser()
 	const isOwner = user?.id === data.note.ownerId
 
+	const canDelete = true
+	const displayBar = canDelete || isOwner
+
 	return (
 		<div className="absolute inset-0 flex flex-col px-10">
 			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.note.title}</h2>
@@ -130,7 +133,7 @@ export default function NoteRoute() {
 					{data.note.content}
 				</p>
 			</div>
-			{isOwner ? (
+			{displayBar ? (
 				<div className={floatingToolbarClassName}>
 					<span className="text-sm text-foreground/90 max-[524px]:hidden">
 						<Icon name="clock" className="scale-125">
