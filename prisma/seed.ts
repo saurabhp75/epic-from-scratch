@@ -94,6 +94,7 @@ async function seed() {
 					// the username. This isn't secure, but this is test data
 					password: { create: createPassword(userData.username) },
 					image: { create: userImages[index % 10] },
+					roles: { connect: { name: 'user' } },
 					notes: {
 						create: Array.from({
 							length: faker.number.int({ min: 1, max: 3 }),
@@ -163,7 +164,9 @@ async function seed() {
 			name: 'Kody',
 			// add Kody's profile image here (kodyImages.kodyUser)
 			image: { create: kodyImages.kodyUser },
-			password: { create: createPassword('kodylovesyou') },
+			password: { create: createPassword('saurabh123') },
+			// connect the admin and user roles to this user
+			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 			notes: {
 				create: [
 					{
