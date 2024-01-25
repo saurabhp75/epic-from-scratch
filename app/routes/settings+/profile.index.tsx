@@ -56,6 +56,7 @@ type ProfileActionArgs = {
 }
 const profileUpdateActionIntent = 'update-profile'
 const deleteDataActionIntent = 'delete-data'
+const signOutOfSessionsActionIntent = 'sign-out-of-sessions'
 
 export async function action({ request }: ActionFunctionArgs) {
 	const userId = 'some_user_id' // we'll take care of this next
@@ -65,6 +66,9 @@ export async function action({ request }: ActionFunctionArgs) {
 	switch (intent) {
 		case profileUpdateActionIntent: {
 			return profileUpdateAction({ request, userId, formData })
+		}
+		case signOutOfSessionsActionIntent: {
+			return signOutOfSessionsAction({ request, userId, formData })
 		}
 		case deleteDataActionIntent: {
 			return deleteDataAction({ request, userId, formData })
@@ -121,6 +125,7 @@ export default function EditUserProfile() {
 						<Icon name="download">Download your data</Icon>
 					</a>
 				</div>
+				<SignOutOfSessions />
 				<DeleteData />
 			</div>
 		</div>
@@ -271,6 +276,51 @@ function DeleteData() {
 					</Icon>
 				</StatusButton>
 			</fetcher.Form>
+		</div>
+	)
+}
+
+async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
+	// 🐨 get the sessionId from the cookieSession (you'll need to use getSession for this)
+	// 🐨 delete all the sessions that are not the current session
+	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
+	return json({ status: 'success' } as const)
+}
+
+function SignOutOfSessions() {
+	// 🐨 get the loader data using useLoaderData
+	const dc = useDoubleCheck()
+
+	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
+	const otherSessionsCount = 0 // 🐨 this should be the count of sessions minus 1
+	return (
+		<div>
+			{otherSessionsCount ? (
+				<fetcher.Form method="POST">
+					<AuthenticityTokenInput />
+					<StatusButton
+						{...dc.getButtonProps({
+							type: 'submit',
+							name: 'intent',
+							value: signOutOfSessionsActionIntent,
+						})}
+						variant={dc.doubleCheck ? 'destructive' : 'default'}
+						status={
+							fetcher.state !== 'idle'
+								? 'pending'
+								: fetcher.data?.status ?? 'idle'
+						}
+					>
+						<Icon name="avatar">
+							{dc.doubleCheck
+								? `Are you sure?`
+								: `Sign out of ${otherSessionsCount} other sessions`}
+						</Icon>
+					</StatusButton>
+				</fetcher.Form>
+			) : (
+				<Icon name="avatar">This is your only session</Icon>
+			)}
 		</div>
 	)
 }

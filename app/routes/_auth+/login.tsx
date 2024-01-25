@@ -20,7 +20,7 @@ import {
 	getSessionExpirationDate,
 	login,
 	requireAnonymous,
-	userIdKey,
+	sessionKey,
 } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
@@ -87,7 +87,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	)
 
 	// set the 'userId' in the session to the user.id
-	cookieSession.set(userIdKey, user.id)
+	cookieSession.set(sessionKey, user.id)
 
 	// update this redirect to add a 'set-cookie' header to the result of
 	// commitSession with the session value you're working with

@@ -17,13 +17,13 @@ const SESSION_EXPIRATION_TIME = 1000 * 60 * 60 * 24 * 30
 export const getSessionExpirationDate = () =>
 	new Date(Date.now() + SESSION_EXPIRATION_TIME)
 
-export const userIdKey = 'sessionId'
+export const sessionKey = 'sessionId'
 
 export async function getUserId(request: Request) {
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
-	const sessionId = cookieSession.get(userIdKey)
+	const sessionId = cookieSession.get(sessionKey)
 	if (!sessionId) return null
 
 	// query the sessionId table instead. Do a subquery to get the user id
@@ -73,7 +73,7 @@ export async function signup({
 	const hashedPassword = await getPasswordHash(password)
 
 	const session = await prisma.session.create({
-		select: { id: true },
+		select: { id: true, expirationDate: true },
 		data: {
 			expirationDate: getSessionExpirationDate(),
 			user: {
@@ -114,7 +114,7 @@ export async function logout(
 	//it's possible the session doesn't exist, so handle that case gracefully
 	// and make sure we don't prevent the user from logging out if that happens
 	// don't wait for the session to be deleted before proceeding with the logout
-	const sessionId = cookieSession.get(userIdKey)
+	const sessionId = cookieSession.get(sessionKey)
 	// delete the session if it exists, but don't wait for it, go ahead an log the user out
 	// Ignore the errors
 	if (sessionId)

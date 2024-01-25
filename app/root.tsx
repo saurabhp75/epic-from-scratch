@@ -7,7 +7,6 @@ import {
 	json,
 	type MetaFunction,
 	type LoaderFunctionArgs,
-	redirect,
 } from '@remix-run/node'
 import {
 	Link,
@@ -47,13 +46,13 @@ import { Button } from './components/ui/button'
 import { Icon } from './components/ui/icon'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import { getUserId } from './utils/auth.server'
 import { csrf } from './utils/csrf.server'
 import { prisma } from './utils/db.server'
 import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
 import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
 import { userHasRole } from './utils/permissions'
-import { sessionStorage } from './utils/session.server'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
 import { type Toast, getToast } from './utils/toast.server'
 import { useOptionalUser } from './utils/user'
@@ -90,19 +89,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 	const { toast, headers: toastHeaders } = await getToast(request)
 
-	// get the cookie header from the request
-	const cookieSession = await sessionStorage.getSession(
-		request.headers.get('cookie'),
-	)
-
-	// get the userId from the cookie session
-	const userId = cookieSession.get('userId')
+	const userId = await getUserId(request)
 
 	// if there's a userId, then get the user from the database
 	// you will want to specify a select. You'll need the id, username, name,
 	// and image's id
 	const user = userId
-		? await prisma.user.findUnique({
+		? await prisma.user.findUniqueOrThrow({
 				select: {
 					id: true,
 					name: true,
@@ -120,18 +113,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
 				where: { id: userId },
 			})
 		: null
-
-	// if there's a userId but no user then something's wrong.
-	// Let's delete destroy the session and redirect to the home page.
-	if (userId && !user) {
-		// something weird happened... The user is authenticated but we can't find
-		// them in the database. Maybe they were deleted? Let's log them out.
-		throw redirect('/', {
-			headers: {
-				'set-cookie': await sessionStorage.destroySession(cookieSession),
-			},
-		})
-	}
 
 	return json(
 		{
