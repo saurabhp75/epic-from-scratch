@@ -52,6 +52,7 @@ import { prisma } from './utils/db.server'
 import { getEnv } from './utils/env.server'
 import { honeypot } from './utils/honeypot.server'
 import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
+import { userHasRole } from './utils/permissions'
 import { sessionStorage } from './utils/session.server'
 import { getTheme, setTheme, type Theme } from './utils/theme.server'
 import { type Toast, getToast } from './utils/toast.server'
@@ -107,6 +108,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
 					name: true,
 					username: true,
 					image: { select: { id: true } },
+					roles: {
+						select: {
+							name: true,
+							permissions: {
+								select: { entity: true, action: true, access: true },
+							},
+						},
+					},
 				},
 				where: { id: userId },
 			})
@@ -185,6 +194,8 @@ function App() {
 	const theme = useTheme()
 	const user = useOptionalUser()
 	const matches = useMatches()
+	// use the userHasRole utility to determine if the user is an admin
+	const userIsAdmin = userHasRole(user, 'admin')
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
 	return (
@@ -218,6 +229,15 @@ function App() {
 										</span>
 									</Link>
 								</Button>
+								{userIsAdmin ? (
+									<Button asChild variant="secondary">
+										<Link to="/admin">
+											<Icon name="backpack">
+												<span className="hidden sm:block">Admin</span>
+											</Icon>
+										</Link>
+									</Button>
+								) : null}
 							</div>
 						) : (
 							<Button asChild variant="default" size="sm">

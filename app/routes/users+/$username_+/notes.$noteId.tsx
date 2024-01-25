@@ -17,16 +17,20 @@ import { ErrorList } from '~/components/forms'
 import { Button } from '~/components/ui/button'
 import { Icon } from '~/components/ui/icon'
 import { StatusButton } from '~/components/ui/status-button'
-import { getUserId, requireUser } from '~/utils/auth.server'
+import { requireUser } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getNoteImgSrc, invariantResponse, useIsPending } from '~/utils/misc'
+import {
+	requireUserWithPermission,
+	userHasPermission,
+} from '~/utils/permissions'
 import { toastSessionStorage } from '~/utils/toast.server'
 import { useOptionalUser } from '~/utils/user'
 import { type loader as notesLoader } from './notes'
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
-	const userId = await getUserId(request)
+	// const userId = await getUserId(request)
 	const note = await prisma.note.findUnique({
 		where: { id: params.noteId },
 		select: {
@@ -58,22 +62,22 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	// you have the note.ownerId, so you can use that to decide whether you
 	// should be looking for "access: 'own'" or "access: 'any'".
 
-	const permission = userId
-		? await prisma.permission.findFirst({
-				select: { id: true },
-				where: {
-					roles: { some: { users: { some: { id: userId } } } },
-					entity: 'note',
-					action: 'delete',
-					access: note.ownerId === userId ? 'own' : 'any',
-				},
-			})
-		: null
+	// const permission = userId
+	// 	? await prisma.permission.findFirst({
+	// 			select: { id: true },
+	// 			where: {
+	// 				roles: { some: { users: { some: { id: userId } } } },
+	// 				entity: 'note',
+	// 				action: 'delete',
+	// 				access: note.ownerId === userId ? 'own' : 'any',
+	// 			},
+	// 		})
+	// 	: null
 
 	return json({
 		note,
 		timeAgo,
-		canDelete: Boolean(permission),
+		// canDelete: Boolean(permission),
 	})
 }
 
@@ -105,27 +109,11 @@ export async function action({ params, request }: ActionFunctionArgs) {
 	})
 	invariantResponse(note, 'Not found', { status: 404 })
 
-	const permission = await prisma.permission.findFirst({
-		select: { id: true },
-		where: {
-			roles: { some: { users: { some: { id: user.id } } } },
-			entity: 'note',
-			action: 'delete',
-			access: note.ownerId === user.id ? 'own' : 'any',
-		},
-	})
-
-	// if there is no permission, then throw a response with a 403 status code
-	// which you can handle in the error boundary below
-	if (!permission) {
-		throw json(
-			{
-				error: 'Unauthorized',
-				message: `Unauthorized: requires permission delete:note`,
-			},
-			{ status: 403 },
-		)
-	}
+	const isOwner = note.ownerId === user.id
+	await requireUserWithPermission(
+		request,
+		isOwner ? `delete:note:own` : `delete:note:any`,
+	)
 
 	await prisma.note.delete({ where: { id: note.id } })
 
@@ -151,7 +139,10 @@ export default function NoteRoute() {
 	const user = useOptionalUser()
 	const isOwner = user?.id === data.note.ownerId
 
-	const canDelete = data.canDelete
+	const canDelete = userHasPermission(
+		user,
+		isOwner ? 'delete:note:own' : 'delete:note:any',
+	)
 	const displayBar = canDelete || isOwner
 
 	return (
