@@ -13,10 +13,11 @@ import { ErrorList, Field } from '~/components/forms'
 import { Button } from '~/components/ui/button'
 import { Icon } from '~/components/ui/icon'
 import { StatusButton } from '~/components/ui/status-button'
-import { requireUserId } from '~/utils/auth.server'
+import { requireUserId, sessionKey } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getUserImgSrc, invariantResponse, useDoubleCheck } from '~/utils/misc'
+import { sessionStorage } from '~/utils/session.server'
 import {
 	EmailSchema,
 	NameSchema,
@@ -41,6 +42,19 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			image: {
 				select: { id: true },
 			},
+			// add a count of the number of sessions for this user
+			// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#select-a-_count-of-relations
+			// also only select those which have not yet expired!
+			// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
+			_count: {
+				select: {
+					sessions: {
+						where: {
+							expirationDate: { gt: new Date() },
+						},
+					},
+				},
+			},
 		},
 	})
 
@@ -59,7 +73,7 @@ const deleteDataActionIntent = 'delete-data'
 const signOutOfSessionsActionIntent = 'sign-out-of-sessions'
 
 export async function action({ request }: ActionFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	const intent = formData.get('intent')
@@ -281,18 +295,35 @@ function DeleteData() {
 }
 
 async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
-	// 🐨 get the sessionId from the cookieSession (you'll need to use getSession for this)
-	// 🐨 delete all the sessions that are not the current session
-	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
+	// get the sessionId from the cookieSession (you'll need to use getSession for this)
+	// delete all the sessions that are not the current session
+	// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const sessionId = cookieSession.get(sessionKey)
+	invariantResponse(
+		sessionId,
+		'You must be authenticated to sign out of other sessions',
+	)
+	console.log({ sessionId })
+
+	await prisma.session.deleteMany({
+		where: {
+			userId,
+			id: { not: sessionId },
+		},
+	})
 	return json({ status: 'success' } as const)
 }
 
 function SignOutOfSessions() {
-	// 🐨 get the loader data using useLoaderData
+	// get the loader data using useLoaderData
+	const data = useLoaderData<typeof loader>()
 	const dc = useDoubleCheck()
 
 	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
-	const otherSessionsCount = 0 // 🐨 this should be the count of sessions minus 1
+	const otherSessionsCount = data.user._count.sessions - 1
 	return (
 		<div>
 			{otherSessionsCount ? (
