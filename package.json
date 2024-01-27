@@ -25,6 +25,7 @@
     "@conform-to/dom": "^0.9.1",
     "@conform-to/react": "^0.9.1",
     "@conform-to/zod": "^0.9.1",
+    "@epic-web/totp": "^1.1.1",
     "@mswjs/data": "^0.16.1",
     "@paralleldrive/cuid2": "^2.2.2",
     "@prisma/client": "^5.8.1",

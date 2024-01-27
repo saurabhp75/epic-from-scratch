@@ -1,9 +1,11 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
+import { verifyTOTP } from '@epic-web/totp'
 import {
 	json,
 	type LoaderFunctionArgs,
 	type ActionFunctionArgs,
+	redirect,
 } from '@remix-run/node'
 import {
 	Form,
@@ -17,16 +19,25 @@ import { ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
 import { validateCSRF } from '~/utils/csrf.server'
+import { prisma } from '~/utils/db.server'
 import { useIsPending } from '~/utils/misc'
+import { verifySessionStorage } from '~/utils/verification.server'
+import { onboardingEmailSessionKey } from './onboarding'
 
 export const codeQueryParam = 'code'
 export const targetQueryParam = 'target'
 export const redirectToQueryParam = 'redirectTo'
+export const typeQueryParam = 'type'
+
+const types = ['onboarding'] as const
+const VerificationTypeSchema = z.enum(types)
+export type VerificationTypes = z.infer<typeof VerificationTypeSchema>
 
 const VerifySchema = z.object({
 	[codeQueryParam]: z.string().min(6).max(6),
 	[targetQueryParam]: z.string(),
 	[redirectToQueryParam]: z.string().optional(),
+	[typeQueryParam]: VerificationTypeSchema,
 })
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -59,9 +70,41 @@ async function validateRequest(
 	const submission = await parse(body, {
 		schema: () =>
 			VerifySchema.superRefine(async (data, ctx) => {
-				console.log('verify this', data)
-				// we'll validate the code here later
-				const codeIsValid = true
+				// console.log('verify this', data)
+				// retrieve the verification secret, period, digits, charSet, and algorithm
+				// by the target and type and ensure it's not expired
+				// if there's no verification, then add an issue to the code field
+				// that it's invalid (similar to the one below)
+				// set codeIsValid to the result of calling verifyTOTP (from '@epic-web/totp')
+				// with the verification config and the otp from the submitted data
+				const verification = await prisma.verification.findUnique({
+					select: {
+						secret: true,
+						period: true,
+						digits: true,
+						algorithm: true,
+						charSet: true,
+					},
+					where: {
+						target_type: {
+							target: data[targetQueryParam],
+							type: data[typeQueryParam],
+						},
+						OR: [{ expiresAt: { gt: new Date() } }, { expiresAt: null }],
+					},
+				})
+				if (!verification) {
+					ctx.addIssue({
+						path: ['code'],
+						code: z.ZodIssueCode.custom,
+						message: `Invalid code`,
+					})
+					return z.NEVER
+				}
+				const codeIsValid = verifyTOTP({
+					otp: data[codeQueryParam],
+					...verification,
+				})
 				if (!codeIsValid) {
 					ctx.addIssue({
 						path: ['code'],
@@ -82,8 +125,29 @@ async function validateRequest(
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// we'll implement this later
-	throw new Error('This is not yet implemented')
+	const { value: submissionValue } = submission
+
+	await prisma.verification.delete({
+		where: {
+			target_type: {
+				target: submissionValue[targetQueryParam],
+				type: submissionValue[typeQueryParam],
+			},
+		},
+	})
+
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	verifySession.set(
+		onboardingEmailSessionKey,
+		submission.value[targetQueryParam],
+	)
+	return redirect('/onboarding', {
+		headers: {
+			'set-cookie': await verifySessionStorage.commitSession(verifySession),
+		},
+	})
 }
 
 export default function VerifyRoute() {
@@ -101,6 +165,7 @@ export default function VerifyRoute() {
 		},
 		defaultValue: {
 			code: searchParams.get(codeQueryParam) ?? '',
+			type: searchParams.get(typeQueryParam) ?? '',
 			target: searchParams.get(targetQueryParam) ?? '',
 			redirectTo: searchParams.get(redirectToQueryParam) ?? '',
 		},
@@ -131,6 +196,9 @@ export default function VerifyRoute() {
 							}}
 							inputProps={conform.input(fields[codeQueryParam])}
 							errors={fields[codeQueryParam].errors}
+						/>
+						<input
+							{...conform.input(fields[typeQueryParam], { type: 'hidden' })}
 						/>
 						<input
 							{...conform.input(fields[targetQueryParam], { type: 'hidden' })}

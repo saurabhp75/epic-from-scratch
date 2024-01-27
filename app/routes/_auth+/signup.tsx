@@ -1,5 +1,6 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
+import { generateTOTP } from '@epic-web/totp'
 import {
 	json,
 	redirect,
@@ -19,10 +20,8 @@ import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { sendEmail } from '~/utils/email.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
-import { useIsPending } from '~/utils/misc'
+import { getDomainUrl, useIsPending } from '~/utils/misc'
 import { EmailSchema } from '~/utils/user-validation'
-import { verifySessionStorage } from '~/utils/verification.server'
-import { onboardingEmailSessionKey } from './onboarding'
 
 const SignupSchema = z.object({
 	email: EmailSchema,
@@ -64,23 +63,38 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 	const { email } = submission.value
 
+	const { otp, ...verificationConfig } = generateTOTP({
+		algorithm: 'SHA256',
+		period: 10 * 60, // valid for 10 minutes
+	})
+	const type = 'onboarding'
+	const redirectToUrl = new URL(`${getDomainUrl(request)}/verify`)
+	redirectToUrl.searchParams.set('type', type)
+	redirectToUrl.searchParams.set('target', email)
+	const verifyUrl = new URL(redirectToUrl)
+	verifyUrl.searchParams.set('code', otp)
+
+	const verificationData = {
+		type,
+		target: email,
+		...verificationConfig,
+		expiresAt: new Date(Date.now() + verificationConfig.period * 1000),
+	}
+	await prisma.verification.upsert({
+		where: { target_type: { target: email, type } },
+		create: verificationData,
+		update: verificationData,
+	})
+
 	// send an email to the user's email address to test things out.
 	const response = await sendEmail({
 		to: email,
 		subject: `Welcome to Epic Notes!`,
-		text: `This is a test email`,
+		text: `Here's your code: ${otp}. Or open this: ${verifyUrl.toString()}`,
 	})
 
 	if (response.status === 'success') {
-		const verifySession = await verifySessionStorage.getSession(
-			request.headers.get('cookie'),
-		)
-		verifySession.set(onboardingEmailSessionKey, email)
-		return redirect('/onboarding', {
-			headers: {
-				'set-cookie': await verifySessionStorage.commitSession(verifySession),
-			},
-		})
+		return redirect(redirectToUrl.toString())
 	} else {
 		submission.error[''] = [response.error]
 		return json({ status: 'error', submission } as const, { status: 500 })
