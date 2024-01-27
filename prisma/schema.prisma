@@ -196,3 +196,39 @@ model Session {
   // non-unique foreign key
   @@index([userId])
 }
+
+model Verification {
+  // - id: string and a primary key
+  id String @id @default(cuid())
+
+  // createdAt: DateTime and a default value of now
+  createdAt DateTime @default(now())
+
+  // type of verification, e.g. "email" or "phone"
+  type String
+
+  // thing we're trying to verify, e.g. a user's email or phone number
+  target String
+
+  // secret key used to generate the otp
+  secret String
+
+  // algorithm used to generate the otp
+  algorithm String
+
+  // number of digits in the otp
+  digits Int
+
+  // number of seconds the otp is valid for
+  period Int
+
+  // valid characters for the otp
+  charSet String
+
+  // When it's safe to delete this verification
+  expiresAt DateTime?
+
+  // unique constraint on target and type
+  // There should be only one of each type for a given target
+  @@unique([target, type])
+}
