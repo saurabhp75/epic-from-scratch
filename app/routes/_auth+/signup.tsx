@@ -15,13 +15,10 @@ import { z } from 'zod'
 import { CheckboxField, ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
-import {
-	requireAnonymous,
-	sessionKey,
-	signup,
-} from '~/utils/auth.server'
+import { requireAnonymous, sessionKey, signup } from '~/utils/auth.server'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
+import { sendEmail } from '~/utils/email.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
 import { useIsPending } from '~/utils/misc'
 import { sessionStorage } from '~/utils/session.server'
@@ -58,7 +55,18 @@ const SignupFormSchema = z
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	await requireAnonymous(request)
-	return json({})
+	// uncomment this to test it out:
+	const response = await sendEmail({
+		to: 'saurabhp75@gmail.com',
+		subject: 'Hello World',
+		text: 'This is the plain text version',
+		html: '<p>This is the HTML version</p>',
+	})
+
+	// console.log(response)
+	// you should get a log with an error
+	return json({ response })
+	// return json({})
 }
 
 export async function action({ request }: ActionFunctionArgs) {
