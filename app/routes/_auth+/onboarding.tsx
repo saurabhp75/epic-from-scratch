@@ -1,0 +1,241 @@
+import { conform, useForm } from '@conform-to/react'
+import { getFieldsetConstraint, parse } from '@conform-to/zod'
+import {
+	json,
+	redirect,
+	type MetaFunction,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
+} from '@remix-run/node'
+import {
+	Form,
+	useActionData,
+	useLoaderData,
+	useSearchParams,
+} from '@remix-run/react'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { HoneypotInputs } from 'remix-utils/honeypot/react'
+import { safeRedirect } from 'remix-utils/safe-redirect'
+import { z } from 'zod'
+import { CheckboxField, ErrorList, Field } from '~/components/forms'
+import { Spacer } from '~/components/spacer'
+import { StatusButton } from '~/components/ui/status-button'
+import { requireAnonymous, sessionKey, signup } from '~/utils/auth.server'
+import { validateCSRF } from '~/utils/csrf.server'
+import { prisma } from '~/utils/db.server'
+import { checkHoneypot } from '~/utils/honeypot.server'
+import { useIsPending } from '~/utils/misc'
+import { sessionStorage } from '~/utils/session.server'
+import {
+	NameSchema,
+	PasswordSchema,
+	UsernameSchema,
+} from '~/utils/user-validation'
+
+const SignupFormSchema = z
+	.object({
+		username: UsernameSchema,
+		name: NameSchema,
+		password: PasswordSchema,
+		confirmPassword: PasswordSchema,
+		agreeToTermsOfServiceAndPrivacyPolicy: z.boolean({
+			required_error:
+				'You must agree to the terms of service and privacy policy',
+		}),
+		remember: z.boolean().optional(),
+		redirectTo: z.string().optional(),
+	})
+	.superRefine(({ confirmPassword, password }, ctx) => {
+		if (confirmPassword !== password) {
+			ctx.addIssue({
+				path: ['confirmPassword'],
+				code: 'custom',
+				message: 'The passwords must match',
+			})
+		}
+	})
+
+export async function loader({ request }: LoaderFunctionArgs) {
+	await requireAnonymous(request)
+	// We'll do handle this later
+	const email = 'fake@email.com'
+	return json({ email })
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+	await requireAnonymous(request)
+	// We'll do handle this later
+	const email = 'fake@email.com'
+	const formData = await request.formData()
+	await validateCSRF(formData, request.headers)
+	checkHoneypot(formData)
+	const submission = await parse(formData, {
+		schema: SignupFormSchema.superRefine(async (data, ctx) => {
+			const existingUser = await prisma.user.findUnique({
+				where: { username: data.username },
+				select: { id: true },
+			})
+			if (existingUser) {
+				ctx.addIssue({
+					path: ['username'],
+					code: z.ZodIssueCode.custom,
+					message: 'A user already exists with this username',
+				})
+				return
+			}
+		}).transform(async data => {
+			// retrieve the password user entered from data here
+			const session = await signup({ ...data, email })
+
+			return { ...data, session }
+		}),
+		async: true,
+	})
+
+	if (submission.intent !== 'submit') {
+		return json({ status: 'idle', submission } as const)
+	}
+
+	if (!submission.value?.session) {
+		return json({ status: 'error', submission } as const, { status: 400 })
+	}
+
+	const { session, remember, redirectTo } = submission.value
+
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+
+	cookieSession.set(sessionKey, session.id)
+
+	return redirect(safeRedirect(redirectTo), {
+		headers: {
+			// add an expires option to this commitSession call and set it to
+			// a date 30 days in the future if they checked the remember checkbox
+			// or undefined if they did not.
+			'set-cookie': await sessionStorage.commitSession(cookieSession, {
+				expires: remember ? session.expirationDate : undefined,
+			}),
+		},
+	})
+}
+
+export const meta: MetaFunction = () => {
+	return [{ title: 'Setup Epic Notes Account' }]
+}
+
+export default function SignupRoute() {
+	const data = useLoaderData<typeof loader>()
+	const actionData = useActionData<typeof action>()
+	const isPending = useIsPending()
+
+	const [searchParams] = useSearchParams()
+	const redirectTo = searchParams.get('redirectTo')
+
+	const [form, fields] = useForm({
+		id: 'signup-form',
+		constraint: getFieldsetConstraint(SignupFormSchema),
+		defaultValue: { redirectTo },
+		lastSubmission: actionData?.submission,
+		onValidate({ formData }) {
+			return parse(formData, { schema: SignupFormSchema })
+		},
+		shouldRevalidate: 'onBlur',
+	})
+
+	return (
+		<div className="container flex min-h-full flex-col justify-center pb-32 pt-20">
+			<div className="mx-auto w-full max-w-lg">
+				<div className="flex flex-col gap-3 text-center">
+					<h1 className="text-h1">Welcome aboard {data.email}!</h1>
+					<p className="text-body-md text-muted-foreground">
+						Please enter your details.
+					</p>
+				</div>
+				<Spacer size="xs" />
+				<Form
+					method="POST"
+					className="mx-auto min-w-[368px] max-w-sm"
+					{...form.props}
+				>
+					<AuthenticityTokenInput />
+					<HoneypotInputs />
+					<Field
+						labelProps={{ htmlFor: fields.username.id, children: 'Username' }}
+						inputProps={{
+							...conform.input(fields.username),
+							autoComplete: 'username',
+							className: 'lowercase',
+						}}
+						errors={fields.username.errors}
+					/>
+					<Field
+						labelProps={{ htmlFor: fields.name.id, children: 'Name' }}
+						inputProps={{
+							...conform.input(fields.name),
+							autoComplete: 'name',
+						}}
+						errors={fields.name.errors}
+					/>
+					<Field
+						labelProps={{ htmlFor: fields.password.id, children: 'Password' }}
+						inputProps={{
+							...conform.input(fields.password, { type: 'password' }),
+							autoComplete: 'new-password',
+						}}
+						errors={fields.password.errors}
+					/>
+
+					<Field
+						labelProps={{
+							htmlFor: fields.confirmPassword.id,
+							children: 'Confirm Password',
+						}}
+						inputProps={{
+							...conform.input(fields.confirmPassword, { type: 'password' }),
+							autoComplete: 'new-password',
+						}}
+						errors={fields.confirmPassword.errors}
+					/>
+
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.agreeToTermsOfServiceAndPrivacyPolicy.id,
+							children:
+								'Do you agree to our Terms of Service and Privacy Policy?',
+						}}
+						buttonProps={conform.input(
+							fields.agreeToTermsOfServiceAndPrivacyPolicy,
+							{ type: 'checkbox' },
+						)}
+						errors={fields.agreeToTermsOfServiceAndPrivacyPolicy.errors}
+					/>
+
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.remember.id,
+							children: 'Remember me',
+						}}
+						buttonProps={conform.input(fields.remember, { type: 'checkbox' })}
+						errors={fields.remember.errors}
+					/>
+
+					<input {...conform.input(fields.redirectTo, { type: 'hidden' })} />
+
+					<ErrorList errors={form.errors} id={form.errorId} />
+
+					<div className="flex items-center justify-between gap-6">
+						<StatusButton
+							className="w-full"
+							status={isPending ? 'pending' : actionData?.status ?? 'idle'}
+							type="submit"
+							disabled={isPending}
+						>
+							Create an account
+						</StatusButton>
+					</div>
+				</Form>
+			</div>
+		</div>
+	)
+}

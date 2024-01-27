@@ -1,5 +1,7 @@
 // import { getErrorMessage } from './misc'
 
+import { getErrorMessage } from "./misc"
+
 export async function sendEmail(options: {
 	to: string
 	subject: string
@@ -35,13 +37,12 @@ export async function sendEmail(options: {
 	const data = await response.json()
 
 	console.log(data)
-	return { status: 'success' } as const
-	// if (response.ok) {
-	// 	return { status: 'success' } as const
-	// } else {
-	// 	return {
-	// 		status: 'error',
-	// 		error: getErrorMessage(data),
-	// 	} as const
-	// }
+	if (response.ok) {
+		return { status: 'success' } as const
+	} else {
+		return {
+			status: 'error',
+			error: getErrorMessage(data),
+		} as const
+	}
 }
