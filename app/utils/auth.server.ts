@@ -210,3 +210,26 @@ export async function requireUser(request: Request) {
 	}
 	return user
 }
+
+// add a resetUserPassword function which accepts a username and password
+// hash the password using bcrypt
+// then update the password by the username
+export async function resetUserPassword({
+	username,
+	password,
+}: {
+	username: User['username']
+	password: string
+}) {
+	const hashedPassword = await bcrypt.hash(password, 10)
+	return prisma.user.update({
+		where: { username },
+		data: {
+			password: {
+				update: {
+					hash: hashedPassword,
+				},
+			},
+		},
+	})
+}

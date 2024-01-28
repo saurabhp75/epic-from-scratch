@@ -21,13 +21,14 @@ import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getDomainUrl, useIsPending } from '~/utils/misc'
 import { handleVerification as handleOnboardingVerification } from './onboarding'
+import { handleVerification as handleResetPasswordVerification } from './reset-password'
 
 export const codeQueryParam = 'code'
 export const targetQueryParam = 'target'
 export const redirectToQueryParam = 'redirectTo'
 export const typeQueryParam = 'type'
 
-const types = ['onboarding'] as const
+const types = ['onboarding', 'reset-password'] as const
 const VerificationTypeSchema = z.enum(types)
 export type VerificationTypes = z.infer<typeof VerificationTypeSchema>
 
@@ -211,10 +212,11 @@ async function validateRequest(
 	})
 
 	switch (submissionValue[typeQueryParam]) {
-		// 🐨 add 'reset-password' case to this switch statement
-		// and call the handler in ./reset-password.tsx file
 		case 'onboarding': {
 			return handleOnboardingVerification({ request, body, submission })
+		}
+		case 'reset-password': {
+			return handleResetPasswordVerification({ request, body, submission })
 		}
 	}
 }
