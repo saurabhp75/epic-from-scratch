@@ -31,7 +31,7 @@ const prisma = singleton('prisma', () => {
 	// we'll set the logThreshold to 0 so you see all the queries, but in a
 	// production app you'd probably want to fine-tune this value to something
 	// you're more comfortable with.
-	const logThreshold = 0
+	const logThreshold = 50
 
 	const client = new PrismaClient({
 		log: [
