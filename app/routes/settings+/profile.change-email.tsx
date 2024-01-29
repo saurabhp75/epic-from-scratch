@@ -1,7 +1,12 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import * as E from '@react-email/components'
-import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
+import {
+	json,
+	redirect,
+	type DataFunctionArgs,
+	type ActionFunctionArgs,
+} from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { z } from 'zod'
@@ -91,7 +96,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json({ user })
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
