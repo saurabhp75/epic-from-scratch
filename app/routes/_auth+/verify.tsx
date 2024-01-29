@@ -17,6 +17,7 @@ import { z } from 'zod'
 import { ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
+import { handleVerification as handleChangeEmailVerification } from '~/routes/settings+/profile.change-email'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getDomainUrl, useIsPending } from '~/utils/misc'
@@ -28,7 +29,7 @@ export const targetQueryParam = 'target'
 export const redirectToQueryParam = 'redirectTo'
 export const typeQueryParam = 'type'
 
-const types = ['onboarding', 'reset-password'] as const
+const types = ['onboarding', 'reset-password', 'change-email'] as const
 const VerificationTypeSchema = z.enum(types)
 export type VerificationTypes = z.infer<typeof VerificationTypeSchema>
 
@@ -217,6 +218,9 @@ async function validateRequest(
 		}
 		case 'reset-password': {
 			return handleResetPasswordVerification({ request, body, submission })
+		}
+		case 'change-email': {
+			return handleChangeEmailVerification({ request, body, submission })
 		}
 	}
 }

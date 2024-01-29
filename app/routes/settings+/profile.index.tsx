@@ -126,6 +126,13 @@ export default function EditUserProfile() {
 			<div className="col-span-6 my-6 h-1 border-b-[1.5px] border-foreground" />
 			<div className="col-span-full flex flex-col gap-6">
 				<div>
+					<Link to="change-email">
+						<Icon name="envelope-closed">
+							Change email from {data.user.email}
+						</Icon>
+					</Link>
+				</div>
+				<div>
 					<Link to="password">
 						<Icon name="dots-horizontal">Change Password</Icon>
 					</Link>
@@ -149,7 +156,7 @@ export default function EditUserProfile() {
 async function profileUpdateAction({ userId, formData }: ProfileActionArgs) {
 	const submission = await parse(formData, {
 		async: true,
-		schema: ProfileFormSchema.superRefine(async ({ email, username }, ctx) => {
+		schema: ProfileFormSchema.superRefine(async ({ username }, ctx) => {
 			const existingUsername = await prisma.user.findUnique({
 				where: { username },
 				select: { id: true },
@@ -159,17 +166,6 @@ async function profileUpdateAction({ userId, formData }: ProfileActionArgs) {
 					path: ['username'],
 					code: 'custom',
 					message: 'A user already exists with this username',
-				})
-			}
-			const existingEmail = await prisma.user.findUnique({
-				where: { email },
-				select: { id: true },
-			})
-			if (existingEmail && existingEmail.id !== userId) {
-				ctx.addIssue({
-					path: ['email'],
-					code: 'custom',
-					message: 'A user already exists with this email',
 				})
 			}
 		}),
@@ -189,7 +185,6 @@ async function profileUpdateAction({ userId, formData }: ProfileActionArgs) {
 		data: {
 			name: data.name,
 			username: data.username,
-			email: data.email,
 		},
 	})
 
@@ -233,12 +228,6 @@ function UpdateProfile() {
 					labelProps={{ htmlFor: fields.name.id, children: 'Name' }}
 					inputProps={conform.input(fields.name)}
 					errors={fields.name.errors}
-				/>
-				<Field
-					className="col-span-3"
-					labelProps={{ htmlFor: fields.email.id, children: 'Email' }}
-					inputProps={conform.input(fields.email)}
-					errors={fields.email.errors}
 				/>
 			</div>
 
