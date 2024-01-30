@@ -53,8 +53,6 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	const date = new Date(note.updatedAt)
 	const timeAgo = formatDistanceToNow(date)
 
-	// this query is a little tricky if you're unfamiliar with Prisma so make
-	// sure to check the example in the instructions.
 	// get the permission here. If the userId does not exist, don't bother,
 	// as the permission should just be null. If it does though, get the
 	// permission where "some" of the permission's roles have "some" users with the userId

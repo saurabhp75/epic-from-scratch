@@ -21,6 +21,7 @@ import { handleVerification as handleChangeEmailVerification } from '~/routes/se
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getDomainUrl, useIsPending } from '~/utils/misc'
+import { type twoFAVerifyVerificationType } from '../settings+/profile.two-factor.verify'
 import { handleVerification as handleOnboardingVerification } from './onboarding'
 import { handleVerification as handleResetPasswordVerification } from './reset-password'
 
@@ -29,7 +30,7 @@ export const targetQueryParam = 'target'
 export const redirectToQueryParam = 'redirectTo'
 export const typeQueryParam = 'type'
 
-const types = ['onboarding', 'reset-password', 'change-email'] as const
+const types = ['onboarding', 'reset-password', 'change-email', '2fa'] as const
 const VerificationTypeSchema = z.enum(types)
 export type VerificationTypes = z.infer<typeof VerificationTypeSchema>
 
@@ -133,7 +134,8 @@ export async function isCodeValid({
 	target,
 }: {
 	code: string
-	type: VerificationTypes
+	// we're not adding that type to the valid types in general because it's a temporary type
+	type: VerificationTypes | typeof twoFAVerifyVerificationType
 	target: string
 }) {
 	const verification = await prisma.verification.findUnique({
@@ -221,6 +223,9 @@ async function validateRequest(
 		}
 		case 'change-email': {
 			return handleChangeEmailVerification({ request, body, submission })
+		}
+		case '2fa': {
+			throw new Error('not yet implemented')
 		}
 	}
 }

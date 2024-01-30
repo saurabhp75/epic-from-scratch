@@ -17,6 +17,8 @@ export type IconName =
 	| 'exit'
 	| 'file-text'
 	| 'github-logo'
+	| 'lock-closed'
+	| 'lock-open-1'
 	| 'magnifying-glass'
 	| 'moon'
 	| 'pencil-1'
