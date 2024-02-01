@@ -22,6 +22,7 @@ import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { getDomainUrl, useIsPending } from '~/utils/misc'
 import { type twoFAVerifyVerificationType } from '../settings+/profile.two-factor.verify'
+import { handleVerification as handleLoginTwoFactorVerification } from './login'
 import { handleVerification as handleOnboardingVerification } from './onboarding'
 import { handleVerification as handleResetPasswordVerification } from './reset-password'
 
@@ -91,6 +92,8 @@ export async function prepareVerification({
 	target: string
 	redirectTo?: string
 }) {
+	// verifyUrl will contain "code" as search param along with
+	// other params ("type", "target") and is emailed to the user.
 	const verifyUrl = getRedirectToUrl({
 		request,
 		type,
@@ -205,27 +208,32 @@ async function validateRequest(
 
 	const { value: submissionValue } = submission
 
-	await prisma.verification.delete({
-		where: {
-			target_type: {
-				target: submissionValue[targetQueryParam],
-				type: submissionValue[typeQueryParam],
+	async function deleteVerification() {
+		await prisma.verification.delete({
+			where: {
+				target_type: {
+					type: submissionValue[typeQueryParam],
+					target: submissionValue[targetQueryParam],
+				},
 			},
-		},
-	})
+		})
+	}
 
 	switch (submissionValue[typeQueryParam]) {
 		case 'onboarding': {
+			await deleteVerification()
 			return handleOnboardingVerification({ request, body, submission })
 		}
 		case 'reset-password': {
+			await deleteVerification()
 			return handleResetPasswordVerification({ request, body, submission })
 		}
 		case 'change-email': {
+			await deleteVerification()
 			return handleChangeEmailVerification({ request, body, submission })
 		}
 		case '2fa': {
-			throw new Error('not yet implemented')
+			return handleLoginTwoFactorVerification({ request, body, submission })
 		}
 	}
 }

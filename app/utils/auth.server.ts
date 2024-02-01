@@ -50,7 +50,7 @@ export async function login({
 
 	if (!user) return null
 	const session = await prisma.session.create({
-		select: { id: true, expirationDate: true },
+		select: { id: true, expirationDate: true, userId: true },
 		data: {
 			expirationDate: getSessionExpirationDate(),
 			userId: user.id,
