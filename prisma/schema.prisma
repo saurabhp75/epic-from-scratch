@@ -5,7 +5,7 @@
 // sqlite3 prisma/data.db .dump > data.sql
 // npx prisma migrate deploy ; creates a single migration file
 // npx prisma migrate dev ;  run this before deploy command
-// npx prisma migrate reset ;  run this to apply migrations to db
+// npx prisma migrate reset ;  run this to reset db & re-apply all migrations and run seed script.
 // Widen then narrow approach:
 // Widen app to consume A or B
 // Widen db to provide A and B and the app to write to both A and B
