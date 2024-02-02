@@ -4,8 +4,8 @@ import * as E from '@react-email/components'
 import {
 	json,
 	redirect,
-	type DataFunctionArgs,
 	type ActionFunctionArgs,
+	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
@@ -25,6 +25,7 @@ import { invariant, useIsPending } from '~/utils/misc'
 import { redirectWithToast } from '~/utils/toast.server'
 import { EmailSchema } from '~/utils/user-validation'
 import { verifySessionStorage } from '~/utils/verification.server'
+import { requireRecentVerification } from './profile.two-factor.disable'
 
 export const handle = {
 	breadcrumb: <Icon name="envelope-closed">Change Email</Icon>,
@@ -83,8 +84,9 @@ const ChangeEmailSchema = z.object({
 	email: EmailSchema,
 })
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
+	await requireRecentVerification({ request, userId })
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { email: true },
@@ -98,6 +100,7 @@ export async function loader({ request }: DataFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
+	await requireRecentVerification({ request, userId })
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	const submission = await parse(formData, {
