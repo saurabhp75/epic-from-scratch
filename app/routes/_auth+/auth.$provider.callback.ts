@@ -8,10 +8,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const label = providerLabels[providerName]
 
-	const profile = await authenticator.authenticate(providerName, request, {
-		throwOnError: true,
-	})
-	// 🐨 handle the error thrown by logging the error and redirecting the user
+	const profile = await authenticator
+		.authenticate(providerName, request, {
+			throwOnError: true,
+		})
+		.catch(async error => {
+			// console.error(error)
+			throw await redirectWithToast('/login', {
+				type: 'error',
+				title: 'Auth Failed',
+				description: `There was an error authenticating with ${label}.`,
+			})
+		})
+
+	// handle the error thrown by logging the error and redirecting the user
 	// to the login page with a toast message indicating that there was an error
 	// authenticating with the provider.
 

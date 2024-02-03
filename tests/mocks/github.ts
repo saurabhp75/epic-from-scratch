@@ -30,7 +30,7 @@ function createGitHubUser(
 		primary: false, // <-- can only have one of these
 		visibility: faker.helpers.arrayElement(['public', null]),
 	})
-	
+
 	const primaryEmail = {
 		...createEmail(),
 		verified: true,
@@ -133,7 +133,7 @@ export const handlers: Array<HttpHandler> = [
 	http.post(
 		'https://github.com/login/oauth/access_token',
 		async ({ request }) => {
-			// 🐨 uncomment this to test things out:
+			// uncomment this to test things out:
 			// throw new Error('ahhhhhhhhhhhhhhhhhhhhhh!')
 			if (passthroughGitHub) return passthrough()
 			const params = new URLSearchParams(await request.text())
