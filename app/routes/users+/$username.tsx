@@ -29,7 +29,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 		},
 	})
 
-	console.log({ user })
+	// console.log({ user })
 
 	// Replaced by invariantResponse() utility
 	// if (!user) {

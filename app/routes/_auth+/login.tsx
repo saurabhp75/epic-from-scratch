@@ -17,6 +17,7 @@ import { CheckboxField, ErrorList, Field } from '~/components/forms'
 import { Spacer } from '~/components/spacer'
 import { StatusButton } from '~/components/ui/status-button'
 import { login, requireAnonymous, sessionKey } from '~/utils/auth.server'
+import { ProviderConnectionForm } from '~/utils/connections'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
@@ -310,6 +311,9 @@ export default function LoginPage() {
 								</StatusButton>
 							</div>
 						</Form>
+						<div className="mt-5 flex flex-col gap-5 border-b-2 border-t-2 border-border py-3">
+							<ProviderConnectionForm type="Login" providerName="github" />
+						</div>
 						<div className="flex items-center justify-center gap-2 pt-6">
 							<span className="text-muted-foreground">New here?</span>
 							<Link
