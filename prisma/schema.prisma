@@ -3,6 +3,7 @@
 
 // Following command gives sql to replicate the db
 // sqlite3 prisma/data.db .dump > data.sql
+// npx prisma db seed; Runs the seed script on db
 // npx prisma migrate deploy ; creates a single migration file
 // npx prisma migrate dev ;  run this before deploy command
 // npx prisma migrate reset ;  run this to reset db & re-apply all migrations and run seed script.
@@ -56,13 +57,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  image    UserImage?
-  notes    Note[]
+  image       UserImage?
+  notes       Note[]
   // password can't enforced to be required at 
   // db level and this actually is helpful
-  password Password?
-  roles    Role[]
-  sessions Session[]
+  password    Password?
+  roles       Role[]
+  sessions    Session[]
+  connections Connection[]
 }
 
 model Note {
@@ -231,4 +233,24 @@ model Verification {
   // unique constraint on target and type
   // There should be only one of each type for a given target
   @@unique([target, type])
+}
+
+model Connection {
+  id           String @id @default(cuid())
+  providerName String
+  providerId   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // user - relationship to the user (many-to-one) like the others
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // userId - string (non-unique foreign key, so you'll want an index for it)
+  userId String
+
+  // only one connection can exist for a given account on a provider
+  @@unique([providerName, providerId])
+  // non-unique foreign key
+  @@index([userId])
 }
