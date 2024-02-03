@@ -1,4 +1,7 @@
 import { createCookieSessionStorage } from '@remix-run/node'
+import { type ProviderName } from './connections'
+import { GitHubProvider } from './providers/github.server'
+import { type AuthProvider } from './providers/provider'
 
 export const connectionSessionStorage = createCookieSessionStorage({
 	cookie: {
@@ -11,3 +14,18 @@ export const connectionSessionStorage = createCookieSessionStorage({
 		secure: process.env.NODE_ENV === 'production',
 	},
 })
+
+export const providers: Record<ProviderName, AuthProvider> = {
+	github: new GitHubProvider(),
+}
+
+export function handleMockAction(providerName: ProviderName, request: Request) {
+	return providers[providerName].handleMockAction(request)
+}
+
+export function resolveConnectionData(
+	providerName: ProviderName,
+	providerId: string,
+) {
+	return providers[providerName].resolveConnectionData(providerId)
+}

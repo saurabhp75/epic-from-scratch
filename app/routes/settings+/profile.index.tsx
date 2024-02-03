@@ -154,6 +154,11 @@ export default function EditUserProfile() {
 					</Link>
 				</div>
 				<div>
+					<Link to="connections">
+						<Icon name="link-2">Manage connections</Icon>
+					</Link>
+				</div>
+				<div>
 					<a
 						download="my-epic-notes-data.json"
 						// eslint-disable-next-line remix-react-routes/use-link-for-routes

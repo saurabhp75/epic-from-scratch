@@ -2,13 +2,12 @@ import { type Password, type User } from '@prisma/client'
 import { redirect } from '@remix-run/node'
 import bcrypt from 'bcryptjs'
 import { Authenticator } from 'remix-auth'
-import { GitHubStrategy } from 'remix-auth-socials'
 import { safeRedirect } from 'remix-utils/safe-redirect'
-import { connectionSessionStorage } from './connections.server'
+import { connectionSessionStorage, providers } from './connections.server'
 import { prisma } from './db.server'
 import { combineResponseInits } from './misc'
+import { type ProviderUser } from './providers/provider'
 import { sessionStorage } from './session.server'
-import { redirectWithToast } from './toast.server'
 
 // We cannot simply import bcrypt in the routes
 // file as bcrypt needs crypto, which will end up
@@ -22,49 +21,14 @@ export const getSessionExpirationDate = () =>
 	new Date(Date.now() + SESSION_EXPIRATION_TIME)
 
 export const sessionKey = 'sessionId'
-type ProviderUser = {
-	id: string
-	email: string
-	username?: string
-	name?: string
-	imageUrl?: string
-}
 // create the authenticator here, pass the connectionSessionStorage
 export const authenticator = new Authenticator<ProviderUser>(
 	connectionSessionStorage,
 )
 
-// call authenticator.use with a new GitHubStrategy
-authenticator.use(
-	new GitHubStrategy(
-		{
-			clientID: process.env.GITHUB_CLIENT_ID,
-			clientSecret: process.env.GITHUB_CLIENT_SECRET,
-			callbackURL: '/auth/github/callback',
-		},
-		async ({ profile }) => {
-			// profile will have potentially multiple emails, the priority will be the first
-			// get the priority email and throw a redirect with a toast if no email is found
-			const email = profile.emails[0].value.trim().toLowerCase()
-			if (!email) {
-				throw await redirectWithToast('/login', {
-					title: 'No email found',
-					description: 'Please add a verified email to your GitHub account.',
-				})
-			}
-			const username = profile.displayName
-			const imageUrl = profile.photos[0].value
-			return {
-				email,
-				id: profile.id,
-				username,
-				name: profile.name.givenName,
-				imageUrl,
-			}
-		},
-	),
-	'github',
-)
+for (const [providerName, provider] of Object.entries(providers)) {
+	authenticator.use(provider.getAuthStrategy(), providerName)
+}
 
 export async function getUserId(request: Request) {
 	const cookieSession = await sessionStorage.getSession(
