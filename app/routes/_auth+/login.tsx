@@ -1,5 +1,6 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
+// import { generateTOTP } from '@epic-web/totp'
 import {
 	json,
 	redirect,
@@ -39,6 +40,59 @@ const LoginFormSchema = z.object({
 const verifiedTimeKey = 'verified-time'
 const unverifiedSessionIdKey = 'unverified-session-id'
 const rememberKey = 'remember-me'
+
+export async function handleNewSession({
+	request,
+	session,
+	redirectTo,
+	remember = false,
+}: {
+	request: Request
+	session: { userId: string; id: string; expirationDate: Date }
+	redirectTo?: string
+	remember?: boolean
+}) {
+	if (await shouldRequestTwoFA({ request, userId: session.userId })) {
+		const verifySession = await verifySessionStorage.getSession()
+		verifySession.set(unverifiedSessionIdKey, session.id)
+		verifySession.set(rememberKey, remember)
+
+		// get verification details from db
+		// get otp from verification details and log it (remove it in prod)
+		// const twoFactorVerification = await prisma.verification.findUnique({
+		// 	select: { secret: true, algorithm: true, digits: true, period: true },
+		// 	where: {
+		// 		target_type: { type: twoFAVerificationType, target: session.userId },
+		// 	},
+		// })
+		// const { otp } = generateTOTP({ ...twoFactorVerification })
+		// console.log({ otp })
+
+		const redirectUrl = getRedirectToUrl({
+			request,
+			type: twoFAVerificationType,
+			target: session.userId,
+		})
+		return redirect(redirectUrl.toString(), {
+			headers: {
+				'set-cookie': await verifySessionStorage.commitSession(verifySession),
+			},
+		})
+	} else {
+		const cookieSession = await sessionStorage.getSession(
+			request.headers.get('cookie'),
+		)
+		cookieSession.set(sessionKey, session.id)
+
+		return redirect(safeRedirect(redirectTo), {
+			headers: {
+				'set-cookie': await sessionStorage.commitSession(cookieSession, {
+					expires: remember ? session.expirationDate : undefined,
+				}),
+			},
+		})
+	}
+}
 
 export async function handleVerification({
 	request,
@@ -187,39 +241,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	// get the user from the submission.value
 	const { session, remember, redirectTo } = submission.value
 
-	if (await shouldRequestTwoFA({ request, userId: session.userId })) {
-		const verifySession = await verifySessionStorage.getSession()
-		verifySession.set(unverifiedSessionIdKey, session.id)
-		verifySession.set(rememberKey, remember)
-		const redirectUrl = getRedirectToUrl({
-			request,
-			type: twoFAVerificationType,
-			target: session.userId,
-		})
-		return redirect(redirectUrl.toString(), {
-			headers: {
-				'set-cookie': await verifySessionStorage.commitSession(verifySession),
-			},
-		})
-	} else {
-		const cookieSession = await sessionStorage.getSession(
-			request.headers.get('cookie'),
-		)
-		cookieSession.set(sessionKey, session.id)
-
-		// update this redirect to add a 'set-cookie' header to the result of
-		// commitSession with the session value you're working with
-		return redirect(safeRedirect(redirectTo), {
-			headers: {
-				// add an expires option to this commitSession call and set it to
-				// a date 30 days in the future if they checked the remember checkbox
-				// or undefined if they did not.
-				'set-cookie': await sessionStorage.commitSession(cookieSession, {
-					expires: remember ? session.expirationDate : undefined,
-				}),
-			},
-		})
-	}
+	return handleNewSession({ request, session, remember, redirectTo })
 }
 
 export default function LoginPage() {
