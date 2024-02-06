@@ -176,9 +176,9 @@ async function seed() {
 			image: { create: kodyImages.kodyUser },
 			password: { create: createPassword('saurabh123') },
 			// add nested connections create to connect kody to the githubUser
-			// connections: {
-			// 	create: { providerName: 'github', providerId: githubUser.profile.id },
-			// },
+			connections: {
+				create: { providerName: 'github', providerId: githubUser.profile.id },
+			},
 			// connect the admin and user roles to this user
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 			notes: {

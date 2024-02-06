@@ -1,35 +1,31 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import {
 	json,
 	redirect,
-	type ActionFunctionArgs,
 	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, Link, useActionData } from '@remix-run/react'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { z } from 'zod'
 import { ErrorList, Field } from '~/components/forms'
 import { Button } from '~/components/ui/button'
 import { Icon } from '~/components/ui/icon'
 import { StatusButton } from '~/components/ui/status-button'
-import {
-	getPasswordHash,
-	requireUserId,
-	verifyUserPassword,
-} from '~/utils/auth.server'
-import { validateCSRF } from '~/utils/csrf.server'
+import { getPasswordHash, requireUserId } from '~/utils/auth.server'
 import { prisma } from '~/utils/db.server'
 import { useIsPending } from '~/utils/misc'
 import { PasswordSchema } from '~/utils/user-validation'
+import { type BreadcrumbHandle } from './profile'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="dots-horizontal">Password</Icon>,
+	getSitemapEntries: () => null,
 }
 
-const ChangePasswordForm = z
+const CreatePasswordForm = z
 	.object({
-		currentPassword: PasswordSchema,
 		newPassword: PasswordSchema,
 		confirmNewPassword: PasswordSchema,
 	})
@@ -43,42 +39,29 @@ const ChangePasswordForm = z
 		}
 	})
 
-async function requirePassword(userId: string) {
+async function requireNoPassword(userId: string) {
 	const password = await prisma.password.findUnique({
 		select: { userId: true },
 		where: { userId },
 	})
-	if (!password) {
-		throw redirect('/settings/profile/password/create')
+	if (password) {
+		throw redirect('/settings/profile/password')
 	}
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
-	await requirePassword(userId)
+	await requireNoPassword(userId)
 	return json({})
 }
 
 export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
+	await requireNoPassword(userId)
 	const formData = await request.formData()
-	await validateCSRF(formData, request.headers)
 	const submission = await parse(formData, {
 		async: true,
-		schema: ChangePasswordForm.superRefine(
-			async ({ currentPassword, newPassword }, ctx) => {
-				if (currentPassword && newPassword) {
-					const user = await verifyUserPassword({ id: userId }, currentPassword)
-					if (!user) {
-						ctx.addIssue({
-							path: ['currentPassword'],
-							code: 'custom',
-							message: 'Incorrect password.',
-						})
-					}
-				}
-			},
-		),
+		schema: CreatePasswordForm,
 	})
 	// clear the payload so we don't send the password back to the client
 	submission.payload = {}
@@ -98,7 +81,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		where: { id: userId },
 		data: {
 			password: {
-				update: {
+				create: {
 					hash: await getPasswordHash(newPassword),
 				},
 			},
@@ -108,28 +91,22 @@ export async function action({ request }: ActionFunctionArgs) {
 	return redirect(`/settings/profile`)
 }
 
-export default function ChangePasswordRoute() {
+export default function CreatePasswordRoute() {
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
 
 	const [form, fields] = useForm({
 		id: 'signup-form',
-		constraint: getFieldsetConstraint(ChangePasswordForm),
+		constraint: getFieldsetConstraint(CreatePasswordForm),
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
-			return parse(formData, { schema: ChangePasswordForm })
+			return parse(formData, { schema: CreatePasswordForm })
 		},
 		shouldRevalidate: 'onBlur',
 	})
 
 	return (
 		<Form method="POST" {...form.props} className="mx-auto max-w-md">
-			<AuthenticityTokenInput />
-			<Field
-				labelProps={{ children: 'Current Password' }}
-				inputProps={conform.input(fields.currentPassword, { type: 'password' })}
-				errors={fields.currentPassword.errors}
-			/>
 			<Field
 				labelProps={{ children: 'New Password' }}
 				inputProps={conform.input(fields.newPassword, { type: 'password' })}
@@ -151,7 +128,7 @@ export default function ChangePasswordRoute() {
 					type="submit"
 					status={isPending ? 'pending' : actionData?.status ?? 'idle'}
 				>
-					Change Password
+					Create Password
 				</StatusButton>
 			</div>
 		</Form>

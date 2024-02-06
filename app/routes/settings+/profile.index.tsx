@@ -67,7 +67,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		where: { target_type: { type: twoFAVerificationType, target: userId } },
 	})
 
-	return json({ user, isTwoFAEnabled: Boolean(twoFactorVerification) })
+	const password = await prisma.password.findUnique({
+		select: { userId: true },
+		where: { userId },
+	})
+
+	return json({
+		user,
+		hasPassword: Boolean(password),
+		isTwoFAEnabled: Boolean(twoFactorVerification),
+	})
 }
 
 type ProfileActionArgs = {
@@ -149,8 +158,10 @@ export default function EditUserProfile() {
 					</Link>
 				</div>
 				<div>
-					<Link to="password">
-						<Icon name="dots-horizontal">Change Password</Icon>
+					<Link to={data.hasPassword ? 'password' : 'password/create'}>
+						<Icon name="dots-horizontal">
+							{data.hasPassword ? 'Change Password' : 'Create a Password'}
+						</Icon>
 					</Link>
 				</div>
 				<div>

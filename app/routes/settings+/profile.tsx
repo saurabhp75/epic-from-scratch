@@ -8,6 +8,9 @@ import { prisma } from '~/utils/db.server'
 import { cn, invariantResponse } from '~/utils/misc'
 import { useUser } from '~/utils/user'
 
+export const BreadcrumbHandle = z.object({ breadcrumb: z.any() })
+export type BreadcrumbHandle = z.infer<typeof BreadcrumbHandle>
+
 export const handle = {
 	breadcrumb: <Icon name="file-text">Edit Profile</Icon>,
 }
