@@ -173,6 +173,7 @@ export default function SignupRoute() {
 					<ProviderConnectionForm
 						type="Signup"
 						providerName="github"
+						// Add redirectTo prop here
 						redirectTo={redirectTo}
 					/>
 				</div>

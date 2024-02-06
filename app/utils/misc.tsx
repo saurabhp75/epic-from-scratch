@@ -308,3 +308,18 @@ export async function downloadFile(url: string, retries: number = 0) {
 		return downloadFile(url, retries + 1)
 	}
 }
+
+export function getReferrerRoute(request: Request) {
+	// spelling errors and whatever makes this annoyingly inconsistent
+	// in my own testing, `referer` returned the right value, but 🤷‍♂️
+	const referrer =
+		request.headers.get('referer') ??
+		request.headers.get('referrer') ??
+		request.referrer
+	const domain = getDomainUrl(request)
+	if (referrer?.startsWith(domain)) {
+		return referrer.slice(domain.length)
+	} else {
+		return '/'
+	}
+}
