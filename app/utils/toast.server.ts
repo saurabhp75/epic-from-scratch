@@ -14,10 +14,7 @@ const ToastSchema = z.object({
 })
 
 export type Toast = z.infer<typeof ToastSchema>
-export type OptionalToast = Omit<Toast, 'id' | 'type'> & {
-	id?: string
-	type?: z.infer<typeof TypeSchema>
-}
+export type ToastInput = z.input<typeof ToastSchema>
 
 export const toastSessionStorage = createCookieSessionStorage({
 	cookie: {
@@ -32,7 +29,7 @@ export const toastSessionStorage = createCookieSessionStorage({
 
 export async function redirectWithToast(
 	url: string,
-	toast: OptionalToast,
+	toast: ToastInput,
 	init?: ResponseInit,
 ) {
 	return redirect(url, {
@@ -41,9 +38,9 @@ export async function redirectWithToast(
 	})
 }
 
-export async function createToastHeaders(optionalToast: OptionalToast) {
+export async function createToastHeaders(toastInput: ToastInput) {
 	const session = await toastSessionStorage.getSession()
-	const toast = ToastSchema.parse(optionalToast)
+	const toast = ToastSchema.parse(toastInput)
 	session.flash(toastKey, toast)
 	const cookie = await toastSessionStorage.commitSession(session)
 	return new Headers({ 'set-cookie': cookie })

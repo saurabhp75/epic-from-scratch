@@ -6,7 +6,7 @@ import {
 } from '~/utils/auth.server'
 import { ProviderNameSchema, providerLabels } from '~/utils/connections'
 import { prisma } from '~/utils/db.server'
-import { redirectWithToast } from '~/utils/toast.server'
+import { createToastHeaders, redirectWithToast } from '~/utils/toast.server'
 import { verifySessionStorage } from '~/utils/verification.server'
 import { handleNewSession } from './login'
 import {
@@ -69,6 +69,34 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// once you've updated login to export handleNewSession, return a call to it here.
 	if (existingConnection) {
 		return makeSession({ request, userId: existingConnection.userId })
+	}
+
+	// if the profile.email matches a user in the db, then link the account and
+	// make a new session
+	const user = await prisma.user.findUnique({
+		select: { id: true },
+		where: { email: profile.email.toLowerCase() },
+	})
+	if (user) {
+		await prisma.connection.create({
+			data: { providerName, providerId: profile.id, userId: user.id },
+		})
+		return makeSession(
+			{
+				request,
+				userId: user.id,
+				// send them to the connections page to see their new connection
+				redirectTo: '/settings/profile/connections',
+			},
+			{
+				// use `createToastHeaders` to add a header to create a toast message:
+				headers: await createToastHeaders({
+					type: 'success',
+					title: 'Connected',
+					description: `Your "${profile.username}" ${label} account has been connected.`,
+				}),
+			},
+		)
 	}
 
 	// If none of the above condition matches, then the user is onboarding

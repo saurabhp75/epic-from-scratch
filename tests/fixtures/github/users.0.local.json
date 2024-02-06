@@ -3,25 +3,25 @@
     "code": "MOCK_GITHUB_CODE_KODY",
     "accessToken": "MOCK_GITHUB_CODE_KODY_mock_access_token",
     "profile": {
-      "login": "Berneice57",
+      "login": "Shanel77",
       "id": "MOCK_GITHUB_CODE_KODY_profile_id",
-      "name": "Mr. Jan Connelly",
+      "name": "Dr. Lee Kunze",
       "avatar_url": "https://github.com/ghost.png",
       "emails": [
-        "Cora.Auer4@yahoo.com",
-        "Kali_Reilly68@gmail.com",
+        "Bernhard_Hamill@gmail.com",
+        "Muhammad_Nader@yahoo.com",
         "kody@kcd.dev"
       ]
     },
     "emails": [
       {
-        "email": "Cora.Auer4@yahoo.com",
+        "email": "Bernhard_Hamill@gmail.com",
         "verified": false,
         "primary": false,
         "visibility": "public"
       },
       {
-        "email": "Kali_Reilly68@gmail.com",
+        "email": "Muhammad_Nader@yahoo.com",
         "verified": true,
         "primary": false,
         "visibility": null
