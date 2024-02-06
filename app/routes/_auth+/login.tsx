@@ -94,13 +94,19 @@ export async function handleNewSession(
 		)
 		cookieSession.set(sessionKey, session.id)
 
-		return redirect(safeRedirect(redirectTo), {
-			headers: {
-				'set-cookie': await sessionStorage.commitSession(cookieSession, {
-					expires: remember ? session.expirationDate : undefined,
-				}),
-			},
-		})
+		return redirect(
+			safeRedirect(redirectTo),
+			combineResponseInits(
+				{
+					headers: {
+						'set-cookie': await sessionStorage.commitSession(cookieSession, {
+							expires: remember ? session.expirationDate : undefined,
+						}),
+					},
+				},
+				responseInit,
+			),
+		)
 	}
 }
 
