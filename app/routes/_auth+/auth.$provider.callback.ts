@@ -64,6 +64,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 	}
 
+	// If there's a userId, then they're trying to connect to github, so create a connection
+	// for the currently logged in user and give them a toast message letting them
+	// know it worked.
+	if (userId) {
+		await prisma.connection.create({
+			data: { providerName, providerId: profile.id, userId },
+		})
+		throw await redirectWithToast('/settings/profile/connections', {
+			title: 'Connected',
+			type: 'success',
+			description: `Your "${profile.username}" ${label} account has been connected.`,
+		})
+	}
+
 	// if there's an existing connection, then the user is trying to login.
 	// create a new session for the existingConnection.userId
 	// once you've updated login to export handleNewSession, return a call to it here.
