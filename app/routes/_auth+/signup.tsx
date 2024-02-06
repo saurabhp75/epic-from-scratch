@@ -16,6 +16,7 @@ import { GeneralErrorBoundary } from '~/components/error-boundary'
 import { ErrorList, Field } from '~/components/forms'
 import { StatusButton } from '~/components/ui/status-button'
 import { requireAnonymous } from '~/utils/auth.server'
+import { ProviderConnectionForm } from '~/utils/connections'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { sendEmail } from '~/utils/email.server'
@@ -168,6 +169,13 @@ export default function SignupRoute() {
 						Submit
 					</StatusButton>
 				</Form>
+				<div className="mt-5 flex flex-col gap-5 border-b-2 border-t-2 border-border py-3">
+					<ProviderConnectionForm
+						type="Signup"
+						providerName="github"
+						redirectTo={redirectTo}
+					/>
+				</div>
 			</div>
 		</div>
 	)

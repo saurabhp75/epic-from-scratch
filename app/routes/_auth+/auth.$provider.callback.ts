@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs } from '@remix-run/node'
+import { redirect, type LoaderFunctionArgs } from '@remix-run/node'
 import {
 	authenticator,
 	getSessionExpirationDate,
@@ -7,7 +7,13 @@ import {
 import { ProviderNameSchema, providerLabels } from '~/utils/connections'
 import { prisma } from '~/utils/db.server'
 import { redirectWithToast } from '~/utils/toast.server'
+import { verifySessionStorage } from '~/utils/verification.server'
 import { handleNewSession } from './login'
+import {
+	onboardingEmailSessionKey,
+	prefilledProfileKey,
+	providerIdKey,
+} from './onboarding_.$provider'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const providerName = ProviderNameSchema.parse(params.provider)
@@ -72,9 +78,31 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return handleNewSession({ request, session, remember: true })
 	}
 
-	throw await redirectWithToast('/login', {
-		title: 'Auth Success (jk)',
-		description: `You have successfully authenticated with ${label} (not really though...).`,
-		type: 'success',
+	// If none of the above condition matches, then the user is onboarding
+	// using OAuth
+	// Make sure the username matches our rules:
+	// 1. only alphanumeric characters
+	// 2. lowercase
+	// 3. 3-20 characters long
+	// replace invalid characters with "_"
+	// return a redirect to `/onboarding/${providerName}` and commit the verify session storage
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	verifySession.set(onboardingEmailSessionKey, profile.email)
+	verifySession.set(prefilledProfileKey, {
+		...profile,
+		username: profile.username
+			?.replace(/[^a-zA-Z0-9_]/g, '_')
+			.toLowerCase()
+			.slice(0, 20)
+			.padEnd(3, '_'),
+	})
+	// set the providerIdKey to the profile.id
+	verifySession.set(providerIdKey, profile.id)
+	return redirect(`/onboarding/${providerName}`, {
+		headers: {
+			'set-cookie': await verifySessionStorage.commitSession(verifySession),
+		},
 	})
 }

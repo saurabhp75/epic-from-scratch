@@ -3,8 +3,9 @@ import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import {
 	json,
 	redirect,
-	type DataFunctionArgs,
 	type MetaFunction,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import {
 	Form,
@@ -22,6 +23,7 @@ import {
 	authenticator,
 	requireAnonymous,
 	sessionKey,
+	signupWithConnection,
 } from '~/utils/auth.server'
 import { ProviderNameSchema } from '~/utils/connections'
 import { prisma } from '~/utils/db.server'
@@ -33,6 +35,7 @@ import { type VerifyFunctionArgs } from './verify'
 
 export const onboardingEmailSessionKey = 'onboardingEmail'
 export const providerIdKey = 'providerId'
+export const prefilledProfileKey = 'prefilledProfile'
 
 const SignupFormSchema = z.object({
 	imageUrl: z.string().optional(),
@@ -73,11 +76,16 @@ async function requireData({
 	}
 }
 
-export async function loader({ request, params }: DataFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
 	const { email } = await requireData({ request, params })
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
+
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const prefilledProfile = verifySession.get(prefilledProfileKey)
 
 	const formError = cookieSession.get(authenticator.sessionErrorKey)
 
@@ -86,7 +94,7 @@ export async function loader({ request, params }: DataFunctionArgs) {
 		status: 'idle',
 		submission: {
 			intent: '',
-			payload: {} as Record<string, unknown>,
+			payload: (prefilledProfile ?? {}) as Record<string, unknown>,
 			error: {
 				'': typeof formError === 'string' ? [formError] : [],
 			},
@@ -94,7 +102,7 @@ export async function loader({ request, params }: DataFunctionArgs) {
 	})
 }
 
-export async function action({ request, params }: DataFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
 	const { email, providerId, providerName } = await requireData({
 		request,
 		params,
@@ -119,13 +127,12 @@ export async function action({ request, params }: DataFunctionArgs) {
 				return
 			}
 		}).transform(async data => {
-			console.log('TODO: implement third party onboarding', {
+			const session = await signupWithConnection({
 				...data,
 				email,
 				providerId,
 				providerName,
 			})
-			const session = { id: 'TODO', expirationDate: new Date() }
 			return { ...data, session }
 		}),
 		async: true,

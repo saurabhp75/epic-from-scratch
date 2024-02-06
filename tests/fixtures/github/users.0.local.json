@@ -3,36 +3,144 @@
     "code": "MOCK_GITHUB_CODE_KODY",
     "accessToken": "MOCK_GITHUB_CODE_KODY_mock_access_token",
     "profile": {
-      "login": "Ena26",
+      "login": "Berneice57",
       "id": "MOCK_GITHUB_CODE_KODY_profile_id",
-      "name": "Matt Skiles",
+      "name": "Mr. Jan Connelly",
       "avatar_url": "https://github.com/ghost.png",
       "emails": [
-        "Christina.Dickens@gmail.com",
-        "Woodrow_Ritchie@gmail.com",
-        "Ewell_Reinger@hotmail.com"
+        "Cora.Auer4@yahoo.com",
+        "Kali_Reilly68@gmail.com",
+        "kody@kcd.dev"
       ]
     },
     "emails": [
       {
-        "email": "Christina.Dickens@gmail.com",
+        "email": "Cora.Auer4@yahoo.com",
         "verified": false,
         "primary": false,
         "visibility": "public"
       },
       {
-        "email": "Woodrow_Ritchie@gmail.com",
+        "email": "Kali_Reilly68@gmail.com",
         "verified": true,
         "primary": false,
         "visibility": null
       },
       {
-        "email": "Ewell_Reinger@hotmail.com",
+        "email": "kody@kcd.dev",
         "verified": true,
         "primary": true,
-        "visibility": "public"
+        "visibility": null
       }
     ],
-    "primaryEmail": "Ewell_Reinger@hotmail.com"
+    "primaryEmail": "kody@kcd.dev"
+  },
+  {
+    "code": "MOCK_GITHUB_CODE_HANNAH",
+    "accessToken": "MOCK_GITHUB_CODE_HANNAH_mock_access_token",
+    "profile": {
+      "login": "Oleta92",
+      "id": "MOCK_GITHUB_CODE_HANNAH_profile_id",
+      "name": "Alonzo Brown-Mayer",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Rogers.Goldner@yahoo.com",
+        "Janae20@hotmail.com",
+        "Jacquelyn.Kunde@hotmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Rogers.Goldner@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Janae20@hotmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Jacquelyn.Kunde@hotmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Jacquelyn.Kunde@hotmail.com"
+  },
+  {
+    "code": "MOCK_GITHUB_CODE_KODY_2",
+    "accessToken": "MOCK_GITHUB_CODE_KODY_2_mock_access_token",
+    "profile": {
+      "login": "Harrison.Schuppe98",
+      "id": "MOCK_GITHUB_CODE_KODY_2_profile_id",
+      "name": "Miss Veronica Koch",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Alek99@hotmail.com",
+        "Katarina35@hotmail.com",
+        "Kacie.Gerlach@gmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Alek99@hotmail.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Katarina35@hotmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Kacie.Gerlach@gmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Kacie.Gerlach@gmail.com"
+  },
+  {
+    "code": "MOCK_GITHUB_CODE_KODY_3",
+    "accessToken": "MOCK_GITHUB_CODE_KODY_3_mock_access_token",
+    "profile": {
+      "login": "Mitchel73",
+      "id": "MOCK_GITHUB_CODE_KODY_3_profile_id",
+      "name": "Eleanor Jacobs",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Deshawn18@yahoo.com",
+        "Ashleigh.Hackett@yahoo.com",
+        "Ashlynn.West87@yahoo.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Deshawn18@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Ashleigh.Hackett@yahoo.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Ashlynn.West87@yahoo.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Ashlynn.West87@yahoo.com"
   }
 ]
