@@ -68,14 +68,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// create a new session for the existingConnection.userId
 	// once you've updated login to export handleNewSession, return a call to it here.
 	if (existingConnection) {
-		const session = await prisma.session.create({
-			select: { id: true, expirationDate: true, userId: true },
-			data: {
-				expirationDate: getSessionExpirationDate(),
-				userId: existingConnection.userId,
-			},
-		})
-		return handleNewSession({ request, session, remember: true })
+		return makeSession({ request, userId: existingConnection.userId })
 	}
 
 	// If none of the above condition matches, then the user is onboarding
@@ -105,4 +98,26 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			'set-cookie': await verifySessionStorage.commitSession(verifySession),
 		},
 	})
+}
+
+async function makeSession(
+	{
+		request,
+		userId,
+		redirectTo,
+	}: { request: Request; userId: string; redirectTo?: string | null },
+	responseInit?: ResponseInit,
+) {
+	redirectTo ??= '/'
+	const session = await prisma.session.create({
+		select: { id: true, expirationDate: true, userId: true },
+		data: {
+			expirationDate: getSessionExpirationDate(),
+			userId,
+		},
+	})
+	return handleNewSession(
+		{ request, session, redirectTo, remember: true },
+		responseInit,
+	)
 }

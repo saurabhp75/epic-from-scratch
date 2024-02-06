@@ -22,7 +22,7 @@ import { ProviderConnectionForm } from '~/utils/connections'
 import { validateCSRF } from '~/utils/csrf.server'
 import { prisma } from '~/utils/db.server'
 import { checkHoneypot } from '~/utils/honeypot.server'
-import { invariant, useIsPending } from '~/utils/misc'
+import { combineResponseInits, invariant, useIsPending } from '~/utils/misc'
 import { sessionStorage } from '~/utils/session.server'
 import { redirectWithToast } from '~/utils/toast.server'
 import { PasswordSchema, UsernameSchema } from '~/utils/user-validation'
@@ -41,17 +41,20 @@ const verifiedTimeKey = 'verified-time'
 const unverifiedSessionIdKey = 'unverified-session-id'
 const rememberKey = 'remember-me'
 
-export async function handleNewSession({
-	request,
-	session,
-	redirectTo,
-	remember = false,
-}: {
-	request: Request
-	session: { userId: string; id: string; expirationDate: Date }
-	redirectTo?: string
-	remember?: boolean
-}) {
+export async function handleNewSession(
+	{
+		request,
+		session,
+		redirectTo,
+		remember = false,
+	}: {
+		request: Request
+		session: { userId: string; id: string; expirationDate: Date }
+		redirectTo?: string
+		remember?: boolean
+	},
+	responseInit?: ResponseInit,
+) {
 	if (await shouldRequestTwoFA({ request, userId: session.userId })) {
 		const verifySession = await verifySessionStorage.getSession()
 		verifySession.set(unverifiedSessionIdKey, session.id)
@@ -73,11 +76,18 @@ export async function handleNewSession({
 			type: twoFAVerificationType,
 			target: session.userId,
 		})
-		return redirect(redirectUrl.toString(), {
-			headers: {
-				'set-cookie': await verifySessionStorage.commitSession(verifySession),
-			},
-		})
+		return redirect(
+			redirectUrl.toString(),
+			combineResponseInits(
+				{
+					headers: {
+						'set-cookie':
+							await verifySessionStorage.commitSession(verifySession),
+					},
+				},
+				responseInit,
+			),
+		)
 	} else {
 		const cookieSession = await sessionStorage.getSession(
 			request.headers.get('cookie'),
