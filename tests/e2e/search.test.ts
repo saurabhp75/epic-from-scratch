@@ -1,17 +1,46 @@
-import { expect, test } from '@playwright/test'
-import { createUser } from "@/db-utils"
+import { test as base } from '@playwright/test'
+import { createUser } from '@/db-utils'
 import { prisma } from '~/utils/db.server'
 
 // Run "npx playwright test --ui" to run this test
 
+// The newUser variable should be assigned to the result of calling insertNewUser
+const test = base.extend<{
+	insertNewUser(): Promise<{
+		id: string
+		name: string | null
+		username: string
+	}>
+}>({
+	// eslint-disable-next-line no-empty-pattern
+	insertNewUser: async ({}, use) => {
+		let userId: string | undefined = undefined
+		await use(async () => {
+			const userData = createUser()
+			const newUser = await prisma.user.create({
+				select: { id: true, name: true, username: true },
+				data: userData,
+			})
+			userId = newUser.id
+			return newUser
+		})
+		// This will run after the tests are completed or throw error
+		if (userId) {
+			await prisma.user.deleteMany({ where: { id: userId } })
+		}
+	},
+})
+
+const { expect } = test
+
 // create test here, you'll need the "page" fixture.
-test('Search from home page', async ({ page }) => {
+test('Search from home page', async ({ page, insertNewUser }) => {
 	// create a new user in the database.
-	const userData = createUser()
-	const newUser = await prisma.user.create({
-		select: { id: true, name: true, username: true },
-		data: userData,
-	})
+	const newUser = await insertNewUser()
+
+	// Uncomment to test the fixture, now the created user will
+	// be deleted in case of error
+	// throw new Error('🧝‍♂️ Oh no, I broke it')
 
 	// go to the home page ( "/")
 	await page.goto('/')
@@ -58,7 +87,4 @@ test('Search from home page', async ({ page }) => {
 
 	// assert that the text "no users found" is visible
 	await expect(page.getByText(/no users found/i)).toBeVisible()
-
-	// delete the user you created here
-	await prisma.user.delete({ where: { id: newUser.id } })
 })

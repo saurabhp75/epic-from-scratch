@@ -12,3 +12,4 @@ node_modules
 *.local.*
 # This is to make things easier for our workshop setup:
 !users.0.local.json
+test-results/
