@@ -2,6 +2,7 @@ import 'dotenv/config'
 import 'app/utils/env.server.ts'
 import { installGlobals } from '@remix-run/node'
 import { beforeEach, vi, type SpyInstance } from 'vitest'
+import '@testing-library/jest-dom/vitest'
 
 installGlobals()
 
