@@ -1,6 +1,9 @@
 // create and export handlers here
 // the type is Array<HttpHandler>
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { faker } from '@faker-js/faker'
+import fsExtra from 'fs-extra'
 import { HttpResponse, http, type HttpHandler } from 'msw'
 import { z } from 'zod'
 
@@ -20,15 +23,34 @@ const EmailSchema = z.object({
 	html: z.string().optional(),
 })
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const emailFixturesDirPath = path.join(__dirname, '..', 'fixtures', 'email')
+await fsExtra.ensureDir(emailFixturesDirPath)
+
+export async function requireEmail(recipient: string) {
+	const email = await fsExtra.readJSON(
+		path.join(emailFixturesDirPath, `${recipient}.json`),
+	)
+	// parse with email schema to make TS happy
+	return EmailSchema.parse(email)
+}
+
 export const handlers: Array<HttpHandler> = [
 	http.post(`https://api.resend.com/emails`, async ({ request }) => {
-		const body = EmailSchema.parse(await request.json())
-		console.info('🔶 mocked email contents:', body)
+		const email = EmailSchema.parse(await request.json())
+		console.info('🔶 mocked email contents:', email)
+
+		// write the email as json to file in "email" directory with
+		// filename set to the "to" email address.
+		await fsExtra.writeJSON(
+			path.join(emailFixturesDirPath, `./${email.to}.json`),
+			email,
+		)
 
 		return json({
 			id: faker.string.uuid(),
-			from: body.from,
-			to: body.to,
+			from: email.from,
+			to: email.to,
 			created_at: new Date().toISOString(),
 		})
 	}),
