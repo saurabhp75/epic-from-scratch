@@ -1,7 +1,9 @@
 /**
  * @vitest-environment jsdom
  */
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook, screen } from '@testing-library/react'
+import { userEvent } from '@testing-library/user-event'
+import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
 import { useDoubleCheck } from './misc'
 
@@ -58,4 +60,55 @@ test('hook: prevents default on the first click, and does not on the second', as
 	expect(myClick).toHaveBeenCalledTimes(1)
 	// assert the event.defaultPrevented is false
 	expect(click2.defaultPrevented).toBe(false)
+})
+
+// create a test component here. It's up to you how you do it, but it should
+// probably render a button that uses the useDoubleCheck hook and renders some
+// element that indicates whether the default was prevented or not.
+function TestComponent() {
+	const [defaultPrevented, setDefaultPrevented] = useState<
+		'idle' | 'no' | 'yes'
+	>('idle')
+	const dc = useDoubleCheck()
+	return (
+		<div>
+			<output>Default Prevented: {defaultPrevented}</output>
+			<button
+				{...dc.getButtonProps({
+					onClick: e => setDefaultPrevented(e.defaultPrevented ? 'yes' : 'no'),
+				})}
+			>
+				{dc.doubleCheck ? 'You sure?' : 'Click me'}
+			</button>
+		</div>
+	)
+}
+
+test('TestComponent: prevents default on the first click, and does not on the second', async () => {
+	// get the user object from userEvent.setup():
+	const user = userEvent.setup()
+
+	// render your test component
+	await render(<TestComponent />)
+
+	// verify the initial state of your elements
+	const status = screen.getByRole('status')
+	const button = screen.getByRole('button')
+
+	expect(status).toHaveTextContent('Default Prevented: idle')
+	expect(button).toHaveTextContent('Click me')
+
+	// click on the button
+	await user.click(button)
+
+	// verify the state of your elements after the first click
+	expect(button).toHaveTextContent('You sure?')
+	expect(status).toHaveTextContent('Default Prevented: yes')
+
+	// click on the button again
+	await user.click(button)
+
+	// verify the state of your elements after the second click
+	expect(button).toHaveTextContent('You sure?')
+	expect(status).toHaveTextContent('Default Prevented: no')
 })
