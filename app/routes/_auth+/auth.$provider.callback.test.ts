@@ -2,11 +2,11 @@ import { generateTOTP } from '@epic-web/totp'
 import { faker } from '@faker-js/faker'
 import { http } from 'msw'
 // import the mock server from the mocks folder
-// because it starts the server for us automatically, you don't have to worry
+// because it starts the server automatically, you don't have to worry
 // about starting it, and it also handles stopping automatically as well.
 // import '#tests/mocks/index.ts'
 import { afterEach, expect, test } from 'vitest'
-import { createUser, insertNewUser } from '@/db-utils'
+import { createUser } from '@/db-utils'
 import { deleteGitHubUsers, insertGitHubUser } from '@/mocks/github'
 import { server } from '@/mocks/index'
 import { consoleError } from '@/setup/setup-test-env'
@@ -304,12 +304,11 @@ async function setupRequest({
 async function setupUser(userData = createUser()) {
 	// Because our database is completely reset beetween tests, you can skip the
 	// insertNewUser and do a nested create now!
-	const user = await insertNewUser(userData)
 	const session = await prisma.session.create({
 		data: {
 			expirationDate: getSessionExpirationDate(),
 			// use a nested create instead:
-			userId: user.id,
+			user: { create: userData },
 		},
 		select: {
 			id: true,
