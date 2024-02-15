@@ -29,6 +29,37 @@ afterEach(async () => {
 	await deleteGitHubUsers()
 })
 
+// add expect.extend call here
+//   create a toHaveRedirect "matcher" function here that accepts the response and redirectTo
+//   if the response "location" header doesn't match the redirectTo, return a failure message
+//   Use this.utils.printExpected/this.utils.printReceived
+expect.extend({
+	toHaveRedirect(response: Response, redirectTo: string) {
+		const location = response.headers.get('location')
+		return {
+			pass: location === redirectTo,
+			message: () =>
+				`Expected response to redirect to ${this.utils.printExpected(
+					redirectTo,
+				)} but got ${this.utils.printReceived(location)}`,
+		}
+	},
+})
+
+// here's the template for making the types work:
+// interface CustomMatchers<R = unknown> {
+// note that the first argument to your matcher is not represented in this type!
+// 	toBeLoggedIn(userName: string): R
+// }
+interface CustomMatchers<R = unknown> {
+	toHaveRedirect(redirectTo: string): R
+}
+
+declare module 'vitest' {
+	interface Assertion<T = any> extends CustomMatchers<T> {}
+	interface AsymmetricMatchersContaining extends CustomMatchers {}
+}
+
 // add some cleanup for our own users that are inserted during the tests:
 // use insertedUsers from '#tests/db-utils.ts' and make sure to clear it after
 // deleting the users.
@@ -49,7 +80,7 @@ test('a new user goes to onboarding', async () => {
 
 	// assert the response is a redirect to `/onboarding/github`
 	expect(response.headers.get('location')).toBe('/onboarding/github')
-	assertRedirect(response, '/onboarding/github')
+	expect(response).toHaveRedirect('/onboarding/github')
 })
 
 test('when auth fails, send the user to login with a toast', async () => {
@@ -79,9 +110,9 @@ test('when auth fails, send the user to login with a toast', async () => {
 	invariant(response instanceof Response, 'response should be a Response')
 
 	// assert a redirect to '/login'
-	assertRedirect(response, '/login')
+	expect(response).toHaveRedirect('/login')
 
-	// assert a toast was sent (you can use Kellie's assertToastSent util below)
+	// assert a toast was sent
 	assertToastSent(response)
 
 	// Assert consoleError was called once and make sure to call mockClear on it.
@@ -102,7 +133,7 @@ test('when a user is logged in, it creates the connection', async () => {
 		code: githubUser.code,
 	})
 	const response = await loader({ request, params: PARAMS, context: {} })
-	assertRedirect(response, '/settings/profile/connections')
+	expect(response).toHaveRedirect('/settings/profile/connections')
 	assertToastSent(response)
 
 	// look in prisma.connection for the connection that should have been
@@ -139,7 +170,7 @@ test(`when a user is logged in and has already connected, it doesn't do anything
 		code: githubUser.code,
 	})
 	const response = await loader({ request, params: PARAMS, context: {} })
-	assertRedirect(response, '/settings/profile/connections')
+	expect(response).toHaveRedirect('/settings/profile/connections')
 	assertToastSent(response)
 })
 
@@ -150,7 +181,7 @@ test('when a user exists with the same email, create connection and make session
 	const request = await setupRequest({ code: githubUser.code })
 	const response = await loader({ request, params: PARAMS, context: {} })
 
-	assertRedirect(response, '/settings/profile/connections')
+	expect(response).toHaveRedirect('/settings/profile/connections')
 
 	assertToastSent(response)
 
@@ -188,7 +219,7 @@ test('gives an error if the account is already connected to another user', async
 		code: githubUser.code,
 	})
 	const response = await loader({ request, params: PARAMS, context: {} })
-	assertRedirect(response, '/settings/profile/connections')
+	expect(response).toHaveRedirect('/settings/profile/connections')
 	assertToastSent(response)
 })
 
@@ -204,7 +235,7 @@ test('if a user is not logged in, but the connection exists, make a session', as
 	})
 	const request = await setupRequest({ code: githubUser.code })
 	const response = await loader({ request, params: PARAMS, context: {} })
-	assertRedirect(response, '/')
+	expect(response).toHaveRedirect('/')
 	await assertSessionMade(response, userId)
 })
 
@@ -232,7 +263,7 @@ test('if a user is not logged in, but the connection exists and they have enable
 		type: twoFAVerificationType,
 		target: userId,
 	})
-	assertRedirect(response, `/verify?${searchParams}`)
+	expect(response).toHaveRedirect(`/verify?${searchParams}`)
 })
 
 function assertToastSent(response: Response) {
@@ -273,11 +304,11 @@ async function assertSessionMade(response: Response, userId: string) {
 // make a helper function here called assertRedirect that takes a response and
 // a redirectTo string. It should assert that the response has a 300 status code
 // and that the location header is set to the redirectTo string.
-function assertRedirect(response: Response, redirectTo: string) {
-	expect(response.status).toBeGreaterThanOrEqual(300)
-	expect(response.status).toBeLessThan(400)
-	expect(response.headers.get('location')).toBe(redirectTo)
-}
+// function assertRedirect(response: Response, redirectTo: string) {
+// 	expect(response.status).toBeGreaterThanOrEqual(300)
+// 	expect(response.status).toBeLessThan(400)
+// 	expect(response.headers.get('location')).toBe(redirectTo)
+// }
 
 function convertSetCookieToCookie(setCookie: string) {
 	const parsedCookie = setCookieParser.parseString(setCookie)
