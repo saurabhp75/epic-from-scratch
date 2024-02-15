@@ -77,7 +77,7 @@ export async function handleNewSession(
 			target: session.userId,
 		})
 		return redirect(
-			redirectUrl.toString(),
+			`${redirectUrl.pathname}?${redirectUrl.searchParams}`,
 			combineResponseInits(
 				{
 					headers: {

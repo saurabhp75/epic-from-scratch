@@ -34,14 +34,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		.catch(async error => {
 			console.error(error)
-			const loginRedirect = [
-				'/login',
-				redirectTo ? new URLSearchParams({ redirectTo }) : null,
-			]
-				.filter(Boolean)
-				.join('?')
 			throw await redirectWithToast(
-				loginRedirect,
+				'/login',
 				{
 					title: 'Auth Failed',
 					description: `There was an error authenticating with ${label}.`,
@@ -73,7 +67,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// 2. The account is already connected to someone else's account
 	// redirect to /settings/profile/connections with apprpropriate toast message
 	if (existingConnection && userId) {
-		throw await redirectWithToast(
+		return await redirectWithToast(
 			'/settings/profile/connections',
 			{
 				title: 'Already Connected',
@@ -93,7 +87,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		await prisma.connection.create({
 			data: { providerName, providerId: profile.id, userId },
 		})
-		throw await redirectWithToast(
+		return await redirectWithToast(
 			'/settings/profile/connections',
 			{
 				title: 'Connected',
