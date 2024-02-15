@@ -2,30 +2,28 @@
  * @vitest-environment jsdom
  */
 import { faker } from '@faker-js/faker'
-import { json } from '@remix-run/node'
 import { createRemixStub } from '@remix-run/testing'
 import { render, screen } from '@testing-library/react'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
+import setCookieParser from 'set-cookie-parser'
 import { test } from 'vitest'
-import { type loader as rootLoader } from '~/root'
-import { honeypot } from '~/utils/honeypot.server'
-import { default as UsernameRoute, type loader } from './$username'
-
-function createFakeUser() {
-	const user = {
-		id: faker.string.uuid(),
-		name: faker.person.fullName(),
-		username: faker.internet.userName(),
-		createdAt: faker.date.past(),
-		image: {
-			id: faker.string.uuid(),
-		},
-	}
-	return user
-}
+import { getUserImages, insertNewUser } from '@/db-utils'
+import { loader as rootLoader } from '~/root'
+import { getSessionExpirationDate, sessionKey } from '~/utils/auth.server'
+import { prisma } from '~/utils/db.server'
+import { invariant } from '~/utils/misc'
+import { sessionStorage } from '~/utils/session.server'
+import { default as UsernameRoute, loader } from './$username'
 
 test('The user profile when not logged in as self', async () => {
-	const user = createFakeUser()
+	const user = await insertNewUser()
+	const userImages = await getUserImages()
+	const userImage =
+		userImages[faker.number.int({ min: 0, max: userImages.length - 1 })]
+	await prisma.user.update({
+		where: { id: user.id },
+		data: { image: { create: userImage } },
+	})
 	// create the stub here
 	// it should have a path of /users/:username
 	// the element should be <UsernameRoute />
@@ -37,12 +35,8 @@ test('The user profile when not logged in as self', async () => {
 		{
 			path: '/users/:username',
 			Component: UsernameRoute,
-			loader(): Awaited<ReturnType<typeof loader>> {
-				return json({
-					user,
-					userJoinedDisplay: user.createdAt.toLocaleDateString(),
-				})
-			},
+			// replace this fake loader with the real one. That's it for this test!
+			loader,
 		},
 	])
 
@@ -57,6 +51,8 @@ test('The user profile when not logged in as self', async () => {
 			</AuthenticityTokenProvider>
 		),
 	})
+
+	invariant(user.name, 'User name should be defined')
 
 	// you'll notice we're using findBy queries here which are async. We really
 	// only need it for the first one, because we need to wait for Remix to update
@@ -74,7 +70,32 @@ test('The user profile when not logged in as self', async () => {
 })
 
 test('The user profile when logged in as self', async () => {
-	const user = createFakeUser()
+	// insert a new user and set them up with an image like in the previous test
+	// create a new session for the user
+	const user = await insertNewUser()
+	const userImages = await getUserImages()
+	const userImage =
+		userImages[faker.number.int({ min: 0, max: userImages.length - 1 })]
+	await prisma.user.update({
+		where: { id: user.id },
+		data: { image: { create: userImage } },
+	})
+	const session = await prisma.session.create({
+		select: { id: true },
+		data: {
+			expirationDate: getSessionExpirationDate(),
+			userId: user.id,
+		},
+	})
+
+	const cookieSession = await sessionStorage.getSession()
+	cookieSession.set(sessionKey, session.id)
+	const setCookieHeader = await sessionStorage.commitSession(cookieSession)
+	const parsedCookie = setCookieParser.parseString(setCookieHeader)
+	const cookieHeader = new URLSearchParams({
+		[parsedCookie.name]: parsedCookie.value,
+	}).toString()
+
 	const App = createRemixStub([
 		// the root route's path should be "/" and it also needs an id of "root"
 		// because our utility for getting the user requires it (check #app/utils/user.ts)
@@ -85,20 +106,12 @@ test('The user profile when logged in as self', async () => {
 		{
 			id: 'root',
 			path: '/',
-			loader(): Awaited<ReturnType<typeof rootLoader>> {
-				const honeyProps = honeypot.getInputProps()
-				return json({
-					ENV: { MODE: 'test' },
-					theme: 'light',
-					username: 'testuser',
-					toast: null,
-					user: {
-						...user,
-						roles: [],
-					},
-					csrfToken: 'test-csrf-token',
-					honeyProps,
-				})
+			// replace this with a smaller one that takes the request, sets the
+			// cookie header and then calls the rootLoader directly
+			loader: async args => {
+				// add the cookie header to the request
+				args.request.headers.set('cookie', cookieHeader)
+				return rootLoader(args)
 			},
 			children: [
 				{
@@ -106,11 +119,12 @@ test('The user profile when logged in as self', async () => {
 					// which you'll find in app/root.tsx
 					path: 'users/:username',
 					Component: UsernameRoute,
-					loader(): Awaited<ReturnType<typeof loader>> {
-						return json({
-							user,
-							userJoinedDisplay: user.createdAt.toLocaleDateString(),
-						})
+					// replace this with a smaller one that takes the request, sets the
+					// cookie header and then calls the rootLoader directly
+					loader: async args => {
+						// add the cookie header to the request
+						args.request.headers.set('cookie', cookieHeader)
+						return loader(args)
 					},
 				},
 			],
