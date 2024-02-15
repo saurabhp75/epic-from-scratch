@@ -33,7 +33,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			throwOnError: true,
 		})
 		.catch(async error => {
-			// console.error(error)
+			console.error(error)
 			const loginRedirect = [
 				'/login',
 				redirectTo ? new URLSearchParams({ redirectTo }) : null,
