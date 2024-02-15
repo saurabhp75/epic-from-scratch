@@ -1,7 +1,7 @@
 import path from 'node:path'
-import { execaCommand } from 'execa'
 import fsExtra from 'fs-extra'
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { BASE_DATABASE_PATH } from './global-setup'
 
 // create a databaseFile variable that points to `./tests/prisma/data.db`
 const databaseFile = `./tests/prisma/data.${process.env.VITEST_POOL_ID || 0}.db`
@@ -15,10 +15,8 @@ process.env.DATABASE_URL = `file:${databasePath}`
 // update this file path to include the process.env.VITEST_POOL_ID variable
 // to keep it unique and then move this file to tests/setup/db-setup.ts.
 beforeAll(async () => {
-	await execaCommand(
-		'prisma migrate reset --force --skip-seed --skip-generate',
-		{ stdio: 'inherit' },
-	)
+	// use fsExtra.copyFile to copy the BASE_DATABASE_PATH to the databasePath
+	await fsExtra.copyFile(BASE_DATABASE_PATH, databasePath)
 })
 
 // after each test, dynamically import prisma from #app/utils/db.server.ts and
