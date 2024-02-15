@@ -29,9 +29,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const label = providerLabels[providerName]
 
 	const profile = await authenticator
-		.authenticate(providerName, request, {
-			throwOnError: true,
-		})
+		.authenticate(providerName, request, { throwOnError: true })
 		.catch(async error => {
 			console.error(error)
 			throw await redirectWithToast(
@@ -87,6 +85,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		await prisma.connection.create({
 			data: { providerName, providerId: profile.id, userId },
 		})
+
 		return await redirectWithToast(
 			'/settings/profile/connections',
 			{
@@ -129,7 +128,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			{
 				// use `createToastHeaders` to add a header to create a toast message:
 				headers: await createToastHeaders({
-					type: 'success',
 					title: 'Connected',
 					description: `Your "${profile.username}" ${label} account has been connected.`,
 				}),

@@ -11,7 +11,6 @@ import { getUserImages, insertNewUser } from '@/db-utils'
 import { loader as rootLoader } from '~/root'
 import { getSessionExpirationDate, sessionKey } from '~/utils/auth.server'
 import { prisma } from '~/utils/db.server'
-import { invariant } from '~/utils/misc'
 import { sessionStorage } from '~/utils/session.server'
 import { default as UsernameRoute, loader } from './$username'
 
@@ -51,8 +50,6 @@ test('The user profile when not logged in as self', async () => {
 			</AuthenticityTokenProvider>
 		),
 	})
-
-	invariant(user.name, 'User name should be defined')
 
 	// you'll notice we're using findBy queries here which are async. We really
 	// only need it for the first one, because we need to wait for Remix to update

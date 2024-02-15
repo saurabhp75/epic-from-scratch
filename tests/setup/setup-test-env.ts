@@ -4,12 +4,24 @@ import { installGlobals } from '@remix-run/node'
 import { cleanup } from '@testing-library/react'
 import { beforeEach, vi, type SpyInstance, afterEach } from 'vitest'
 import '@testing-library/jest-dom/vitest'
+import { prisma } from '~/utils/db.server'
 import { server } from '../mocks/index'
+import './custom-matchers'
+// eslint-disable-next-line import/order
+import { insertedUsers } from '@/db-utils'
 
 installGlobals()
 
 afterEach(() => server.resetHandlers())
 afterEach(() => cleanup())
+
+afterEach(async () => {
+	await prisma.user.deleteMany({
+		where: { id: { in: [...insertedUsers] } },
+	})
+	insertedUsers.clear()
+})
+
 
 // This should be logged in unit test run
 // console.log('Hiiiiiiiii There!!!!!')

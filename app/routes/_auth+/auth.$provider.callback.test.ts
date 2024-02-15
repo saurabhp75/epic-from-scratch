@@ -1,16 +1,16 @@
 import { generateTOTP } from '@epic-web/totp'
 import { faker } from '@faker-js/faker'
 import { http } from 'msw'
-import * as setCookieParser from 'set-cookie-parser'
 // import the mock server from the mocks folder
 // because it starts the server for us automatically, you don't have to worry
 // about starting it, and it also handles stopping automatically as well.
 // import '#tests/mocks/index.ts'
 import { afterEach, expect, test } from 'vitest'
-import { createUser, insertNewUser, insertedUsers } from '@/db-utils'
+import { createUser, insertNewUser } from '@/db-utils'
 import { deleteGitHubUsers, insertGitHubUser } from '@/mocks/github'
 import { server } from '@/mocks/index'
 import { consoleError } from '@/setup/setup-test-env'
+import { BASE_URL, convertSetCookieToCookie } from '@/utils'
 import { getSessionExpirationDate, sessionKey } from '~/utils/auth.server'
 import { GITHUB_PROVIDER_NAME } from '~/utils/connections'
 import { connectionSessionStorage } from '~/utils/connections.server'
@@ -22,54 +22,10 @@ import { loader } from './auth.$provider.callback'
 
 const ROUTE_PATH = '/auth/github/callback'
 const PARAMS = { provider: 'github' }
-const BASE_URL = 'https://www.epicstack.dev'
 
 // add some cleanup for the github users that are inserted during the tests:
 afterEach(async () => {
 	await deleteGitHubUsers()
-})
-
-// add expect.extend call here
-//   create a toHaveRedirect "matcher" function here that accepts the response and redirectTo
-//   if the response "location" header doesn't match the redirectTo, return a failure message
-//   Use this.utils.printExpected/this.utils.printReceived
-expect.extend({
-	toHaveRedirect(response: Response, redirectTo: string) {
-		const location = response.headers.get('location')
-		return {
-			pass: location === redirectTo,
-			message: () =>
-				`Expected response to redirect to ${this.utils.printExpected(
-					redirectTo,
-				)} but got ${this.utils.printReceived(location)}`,
-		}
-	},
-})
-
-// here's the template for making the types work:
-// interface CustomMatchers<R = unknown> {
-// note that the first argument to your matcher is not represented in this type!
-// 	toBeLoggedIn(userName: string): R
-// }
-interface CustomMatchers<R = unknown> {
-	toHaveRedirect(redirectTo: string): R
-}
-
-declare module 'vitest' {
-	interface Assertion<T = any> extends CustomMatchers<T> {}
-	interface AsymmetricMatchersContaining extends CustomMatchers {}
-}
-
-// add some cleanup for our own users that are inserted during the tests:
-// use insertedUsers from '#tests/db-utils.ts' and make sure to clear it after
-// deleting the users.
-// if you need a reminder for how we did this in playwright,
-// check tests/playwright-utils.ts
-afterEach(async () => {
-	await prisma.user.deleteMany({
-		where: { id: { in: [...insertedUsers] } },
-	})
-	insertedUsers.clear()
 })
 
 test('a new user goes to onboarding', async () => {
@@ -113,7 +69,12 @@ test('when auth fails, send the user to login with a toast', async () => {
 	expect(response).toHaveRedirect('/login')
 
 	// assert a toast was sent
-	assertToastSent(response)
+	await expect(response).toSendToast(
+		expect.objectContaining({
+			title: 'Auth Failed',
+			type: 'error',
+		}),
+	)
 
 	// Assert consoleError was called once and make sure to call mockClear on it.
 	expect(consoleError).toHaveBeenCalledTimes(1)
@@ -134,7 +95,13 @@ test('when a user is logged in, it creates the connection', async () => {
 	})
 	const response = await loader({ request, params: PARAMS, context: {} })
 	expect(response).toHaveRedirect('/settings/profile/connections')
-	assertToastSent(response)
+	await expect(response).toSendToast(
+		expect.objectContaining({
+			title: 'Connected',
+			type: 'success',
+			description: expect.stringContaining(githubUser.profile.login),
+		}),
+	)
 
 	// look in prisma.connection for the connection that should have been
 	// created for the user.id + the githubUser.profile.id
@@ -171,7 +138,12 @@ test(`when a user is logged in and has already connected, it doesn't do anything
 	})
 	const response = await loader({ request, params: PARAMS, context: {} })
 	expect(response).toHaveRedirect('/settings/profile/connections')
-	assertToastSent(response)
+	expect(response).toSendToast(
+		expect.objectContaining({
+			title: 'Already Connected',
+			description: expect.stringContaining(githubUser.profile.login),
+		}),
+	)
 })
 
 test('when a user exists with the same email, create connection and make session', async () => {
@@ -183,7 +155,12 @@ test('when a user exists with the same email, create connection and make session
 
 	expect(response).toHaveRedirect('/settings/profile/connections')
 
-	assertToastSent(response)
+	await expect(response).toSendToast(
+		expect.objectContaining({
+			type: 'message',
+			description: expect.stringContaining(githubUser.profile.login),
+		}),
+	)
 
 	const connection = await prisma.connection.findFirst({
 		select: { id: true },
@@ -197,7 +174,7 @@ test('when a user exists with the same email, create connection and make session
 		'the connection was not created in the database',
 	).toBeTruthy()
 
-	await assertSessionMade(response, userId)
+	await expect(response).toHaveSessionForUser(userId)
 })
 
 test('gives an error if the account is already connected to another user', async () => {
@@ -220,7 +197,14 @@ test('gives an error if the account is already connected to another user', async
 	})
 	const response = await loader({ request, params: PARAMS, context: {} })
 	expect(response).toHaveRedirect('/settings/profile/connections')
-	assertToastSent(response)
+	await expect(response).toSendToast(
+		expect.objectContaining({
+			title: 'Already Connected',
+			description: expect.stringContaining(
+				'already connected to another account',
+			),
+		}),
+	)
 })
 
 test('if a user is not logged in, but the connection exists, make a session', async () => {
@@ -236,7 +220,7 @@ test('if a user is not logged in, but the connection exists, make a session', as
 	const request = await setupRequest({ code: githubUser.code })
 	const response = await loader({ request, params: PARAMS, context: {} })
 	expect(response).toHaveRedirect('/')
-	await assertSessionMade(response, userId)
+	await expect(response).toHaveSessionForUser(userId)
 })
 
 test('if a user is not logged in, but the connection exists and they have enabled 2FA, send them to verify their 2FA and do not make a session', async () => {
@@ -265,57 +249,6 @@ test('if a user is not logged in, but the connection exists and they have enable
 	})
 	expect(response).toHaveRedirect(`/verify?${searchParams}`)
 })
-
-function assertToastSent(response: Response) {
-	const setCookie = response.headers.get('set-cookie')
-	invariant(setCookie, 'set-cookie header should be set')
-	const parsedCookie = setCookieParser.splitCookiesString(setCookie)
-	expect(parsedCookie).toEqual(
-		expect.arrayContaining([expect.stringContaining('en_toast')]),
-	)
-}
-
-async function assertSessionMade(response: Response, userId: string) {
-	// get the set-cookie header from the response
-	const setCookie = response.headers.get('set-cookie')
-	invariant(setCookie, 'set-cookie header should be set')
-
-	// parse the set-cookie header with setCookieParser.splitCookiesString
-	const parsedCookie = setCookieParser.splitCookiesString(setCookie)
-
-	// console.log(parsedCookie)
-
-	// assert that one of the parsed cookies has the 'en_session' in it
-	expect(parsedCookie).toEqual(
-		expect.arrayContaining([expect.stringContaining('en_session')]),
-	)
-
-	// lookup the new session in the database by the userId
-	const session = await prisma.session.findFirst({
-		select: { id: true },
-		where: { userId },
-	})
-
-	// assert the session exists
-	expect(session).toBeTruthy()
-}
-
-// we're going to be asserting redirects a lot, so if you've got extra time
-// make a helper function here called assertRedirect that takes a response and
-// a redirectTo string. It should assert that the response has a 300 status code
-// and that the location header is set to the redirectTo string.
-// function assertRedirect(response: Response, redirectTo: string) {
-// 	expect(response.status).toBeGreaterThanOrEqual(300)
-// 	expect(response.status).toBeLessThan(400)
-// 	expect(response.headers.get('location')).toBe(redirectTo)
-// }
-
-function convertSetCookieToCookie(setCookie: string) {
-	const parsedCookie = setCookieParser.parseString(setCookie)
-	return new URLSearchParams({
-		[parsedCookie.name]: parsedCookie.value,
-	}).toString()
-}
 
 async function setupRequest({
 	sessionId,
@@ -369,13 +302,19 @@ async function setupRequest({
 }
 
 async function setupUser(userData = createUser()) {
-	const newUser = await insertNewUser(userData)
+	// Because our database is completely reset beetween tests, you can skip the
+	// insertNewUser and do a nested create now!
+	const user = await insertNewUser(userData)
 	const session = await prisma.session.create({
 		data: {
 			expirationDate: getSessionExpirationDate(),
-			user: { connect: newUser },
+			// use a nested create instead:
+			userId: user.id,
 		},
-		select: { id: true, userId: true },
+		select: {
+			id: true,
+			userId: true,
+		},
 	})
 
 	return session
