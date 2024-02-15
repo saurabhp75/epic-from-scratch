@@ -5,7 +5,7 @@ import * as setCookieParser from 'set-cookie-parser'
 // because it starts the server for us automatically, you don't have to worry
 // about starting it, and it also handles stopping automatically as well.
 // import '#tests/mocks/index.ts'
-import { afterEach, expect, test } from 'vitest'
+import { expect, test } from 'vitest'
 import { server } from '@/mocks/index'
 import { consoleError } from '@/setup/setup-test-env'
 import { connectionSessionStorage } from '~/utils/connections.server'
@@ -15,10 +15,6 @@ import { loader } from './auth.$provider.callback'
 const ROUTE_PATH = '/auth/github/callback'
 const PARAMS = { provider: 'github' }
 const BASE_URL = 'https://www.epicstack.dev'
-
-afterEach(() => {
-	server.resetHandlers()
-})
 
 test('a new user goes to onboarding', async () => {
 	const request = await setupRequest()

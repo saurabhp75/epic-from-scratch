@@ -1,10 +1,15 @@
 import 'dotenv/config'
-import 'app/utils/env.server.ts'
+import 'app/utils/env.server'
 import { installGlobals } from '@remix-run/node'
-import { beforeEach, vi, type SpyInstance } from 'vitest'
+import { cleanup } from '@testing-library/react'
+import { beforeEach, vi, type SpyInstance, afterEach } from 'vitest'
 import '@testing-library/jest-dom/vitest'
+import { server } from '../mocks/index'
 
 installGlobals()
+
+afterEach(() => server.resetHandlers())
+afterEach(() => cleanup())
 
 // This should be logged in unit test run
 // console.log('Hiiiiiiiii There!!!!!')

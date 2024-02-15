@@ -2,12 +2,9 @@
  * @vitest-environment jsdom
  */
 import { faker } from '@faker-js/faker'
-import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, expect, test } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { expect, test } from 'vitest'
 import { ErrorList } from './forms'
-
-// Cleanup the jsdom after every test
-afterEach(() => cleanup())
 
 // create a test for "shows nothing when given an empty list"
 // render the <ErrorList /> with no props
